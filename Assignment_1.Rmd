@@ -2,7 +2,9 @@
 title: "Assignment_1"
 author: "Juliette Verstaen"
 date: "5/2/2019"
-output: html_document
+output: pdf_document
+toc: true
+toc_depth: 2
 ---
 
 ```{r setup, include=FALSE}
@@ -10,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-###Import and Tidy
+##Import and Tidy
 ```{r}
 
 library(tidyverse)
@@ -27,9 +29,9 @@ parcels[is.na(parcels)] <- "NA"
 #need to write to a csv file###
 ```
 
-###Analyze
+##Analyze
 
-**What are the 10 most-frequently-occuring land uses (in descending order)? **
+What are the 10 most-frequently-occuring land uses (in descending order)? 
 ```{r}
 
 use_code <- read_delim("data/UseCodes.csv", delim="|", quote= "")
@@ -48,7 +50,7 @@ top_10
 
 ```
 
-**How many acres are in agricultural preserves?**
+###How many acres are in agricultural preserves?
 ```{r}
 
 agg_pre <- parcels_codes %>%
@@ -60,11 +62,57 @@ total_acre
 
 ```
 
+###What is the mean net assessed value per acre of the entire county?
+
+```{r}
+
+mean_county <- mean(parcels_codes$LandValue)
+mean_county
+
+```
+
+###What is the total net assessed value of all non-taxable parcels?
+```{r}
+
+mean_nontax <- parcels_codes%>%
+  filter(NonTaxCode == "NA")
+
+mean_nontax <- mean(mean_nontax$LandValue)
+
+mean_nontax
 
 
+```
 
 
+###What are the 10 largest property holders, by acreage? 
+```{r}
 
+top_10_acr <- parcels_codes%>%
+  filter(Situs1 != "NA") %>%
+  filter(Situs2 != "NA") %>%
+  unite(address, c("Situs1", "Situs1"), sep = " ") %>%
+  arrange(desc(Acreage)) %>%
+  head(10)
+
+top_10_acr
+
+```
+
+What are the 10 largest property holders, by net assessed value?
+
+```{r}
+
+top_10_value <- parcels_codes%>%
+  filter(Situs1 != "NA") %>%
+  filter(Situs2 != "NA") %>%
+  unite(address, c("Situs1", "Situs1"), sep = " ") %>%
+  arrange(desc(LandValue)) %>%
+  head(10)
+
+top_10_value
+
+```
 
 
 
