@@ -1,0 +1,77 @@
+---
+title: "Week3"
+author: "Juliette Verstaen"
+date: "4/19/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+https://r4ds.had.co.nz/introduction.html
+```{r}
+#install.packages(c("nycflights13", "gapminder", "Lahman"))
+
+library(nycflights13)
+library(gapminder)
+library(Lahman)
+library(tidyverse)
+
+```
+
+A tibble = constraint on a dataframe. type of data frame that doesn't have real identifyiers, doesn't conform text into factors
+- subset of a dataframe, makes t easier for all your data loaded in to be more consistant
+
+```{r}
+as_tibble(iris)
+```
+
+
+the <> is the type 
+- dbl = double precision number
+- fct = factor
+
+Can build a tibble out of formulas
+```{r}
+tibble(
+  x= 1:5, 
+  y= 1,
+  z= x^2+y
+)
+
+
+df <- tibble(
+  x = runif(5),
+  y = rnorm(5)
+)
+
+df %>% .$x
+
+
+
+```
+
+```{r}
+
+heights <- read_csv("r4ds/heights.csv")
+
+```
+
+```{r}
+charToRaw("Hadley")
+
+
+```
+
+can use select function and rename at the same time
+example:
+select( df, 
+id= FEATUREID, lat= PRIM_LAT_DEC)
+
+if have data that is filler and not real (ie: 0 for lat long can make them NAs)
+ex: gaz$lat = parse_double(gaz$lat, na= "0")
+
+
+
+

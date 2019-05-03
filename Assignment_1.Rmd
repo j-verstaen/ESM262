@@ -1,0 +1,71 @@
+---
+title: "Assignment_1"
+author: "Juliette Verstaen"
+date: "5/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###Import and Tidy
+```{r}
+
+library(tidyverse)
+
+parcels_raw <- read_csv("data/Santa_Barbara_County_parcels_2011.csv")
+
+as_tibble(parcels_raw)
+
+parcels <- parcels_raw %>%
+  select("APN", "Situs1", "Situs2", "Acreage", "UseCode", "NonTaxCode", "AgPres", "LandValue", "Net_Impr", "Net_AV", "M_Address1", "M_Address2")
+
+parcels[is.na(parcels)] <- "NA"
+
+#need to write to a csv file###
+```
+
+###Analyze
+
+**What are the 10 most-frequently-occuring land uses (in descending order)? **
+```{r}
+
+use_code <- read_delim("data/UseCodes.csv", delim="|", quote= "")
+use_code[is.na(use_code)] <- "NA"
+
+parcels_codes <- left_join(parcels, use_code, by="UseCode")
+
+top_10 <- parcels_codes %>%
+  separate(CodeDesc, c("CodeName", "Desc1", "Desc2"), sep= ",") %>%
+  mutate(n = 1) %>%
+  group_by(CodeName) %>%
+  summarise(frequency = sum(n)) %>%
+  arrange(desc(frequency)) %>%
+  head(10)
+top_10
+
+```
+
+**How many acres are in agricultural preserves?**
+```{r}
+
+agg_pre <- parcels_codes %>%
+  separate(CodeDesc, c("CodeName", "Desc1", "Desc2"), sep= ",") %>%
+  filter(CodeName == "Ag preserve")
+
+total_acre <- sum(agg_pre$Acreage)
+total_acre
+
+```
+
+
+
+
+
+
+
+
+
+
