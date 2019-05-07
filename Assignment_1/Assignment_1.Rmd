@@ -1,0 +1,174 @@
+---
+title: "Assignment_1"
+author: "Juliette Verstaen"
+date: "5/2/2019"
+output: pdf_document
+toc: true
+toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##A. Import and Tidy
+
+```{r}
+
+###load packages
+library(tidyverse)
+
+###set working directory to Assignment_1 folder
+getwd()
+
+###load in raw data
+parcels_raw <- 
+  read_csv("data/Santa_Barbara_County_parcels_2011.csv")
+ ### tried col_types because Frew said to in class, but then I couldn't calculate anything later so I hashed tagged it out
+#                        col_types = cols(.default = col_character())) %>%
+  as_tibble()
+
+###select only columns of interest
+parcels <-
+  transmute(parcels_raw,
+    APN       = APN,
+    Situs1    = Situs1,
+    Situs2    = Situs2,
+    Acreage   = Acreage,
+    UseCode   = UseCode,
+    NonTaxCode= NonTaxCode,
+    AgPres    = AgPres,
+    LandValue = LandValue,
+    Net_Impr  = Net_Impr,
+    Net_AV    = Net_AV,
+    M_Address1 = M_Address1,
+    M_Address2 = M_Address2)
+
+###Convert all blanks in tibble to NAs    
+parcels[is.na(parcels)] <- "NA"
+
+###write to CSV file
+parcels <- write_delim(parcels,
+  "parcels.csv",
+  delim = "|",
+  na = ""
+)
+
+parcels
+```
+
+##B. Analyze
+
+###1. What are the 10 most-frequently-occuring land uses (in descending order)? 
+```{r}
+
+###load in use code data
+use_code <- read_delim("data/UseCodes.csv", 
+                       delim="|", 
+                       quote= "")
+                    #   col_types = cols(.default = col_character()))
+use_code[is.na(use_code)] <- "NA"
+
+###combine the parcels data with the use code data
+parcels_codes <- left_join(parcels, use_code, by="UseCode")
+
+###count the most 10 most frequenctly occuring land uses
+top_10 <- parcels_codes %>%
+  count(UseCode) %>%
+  arrange(desc(n)) %>%
+  head(10) 
+
+###add the code descriptions to the top 10 counted so you know what they are
+B1_topfreq <-  left_join(top_10, use_code, by="UseCode") %>%
+  select("UseCode", "n", "CodeDesc")
+
+```
+
+###2. How many acres are in agricultural preserves?
+
+```{r}
+
+###choose only parcels that are agricultural preserves and have acreage values
+agpres <- parcels_codes %>%
+  filter(AgPres != "NA") %>%
+  filter(Acreage != "NA") 
+
+###add up the number of acres in an ag preserve
+B2_agpres <- sum(agpres$Acreage)
+B2_agpres
+
+```
+
+###3. What is the mean net assessed value per acre of the entire county?
+add up cost of all peices and then divide by the area
+
+```{r}
+
+###pick out acreage and net average value of the parcels
+### remove any of the parcels that are less than or equal to 0, with the assumption that is incorrect/unknown data
+mean_county <- parcels_codes %>%
+  select("Acreage", "Net_AV") %>%
+  filter(Net_AV >=0)
+
+###make vectors of sum of average value and sum of acreage
+sum_av <- sum(mean_county$Net_AV)
+sum_ac <- sum(mean_county$Acreage)
+
+###math for average price/acre
+B3_meannv <- sum_av/sum_ac
+B3_meannv
+
+```
+
+###4. What is the total net assessed value of all non-taxable parcels?
+
+```{r}
+
+###keep only parcels that are non-taxable
+mean_nontax <- parcels_codes%>%
+  filter(NonTaxCode != "NA")
+
+###Find the total net assessed value
+B4_totalnontax <- sum(mean_nontax$Net_AV)
+
+B4_totalnontax
+
+```
+
+
+###5. What are the 10 largest property holders, by acreage? 
+
+```{r}
+
+###Keep only properties that have full mailing addresses and keep top 10 acreage wise
+B5_topacre <- parcels_codes%>%
+  filter(M_Address1 != "NA") %>%
+  filter(M_Address2 != "NA") %>%
+  unite(address, c("M_Address1", "M_Address2"), sep = " ") %>%
+  arrange(desc(Acreage)) %>%
+  head(10)%>%
+  select("address", "Net_AV", "Acreage")
+
+B5_topacre
+
+###how did san fransisco make it into the SB county data??
+
+```
+
+###6. What are the 10 largest property holders, by net assessed value?
+
+```{r}
+
+###Keep only properties that have full mailing addresses and keep top 10 net assessed value wise
+B6_topnv <- parcels_codes%>%
+  filter(M_Address1 != "NA") %>%
+  filter(M_Address2 != "NA") %>%
+  unite(address, c("M_Address1", "M_Address2"), sep = " ") %>%
+  arrange(desc(Net_AV)) %>%
+  head(10) %>%
+  select("address", "Net_AV", "Acreage")
+
+B6_topnv
+
+```

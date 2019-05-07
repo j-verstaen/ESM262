@@ -1,0 +1,202 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+```{r tidyverse}
+library(tidyverse)
+```
+
+## Import and Tidy
+
+1. Read the gazetteer data as-is (all columns; no type conversion) into a `gaz_raw` tibble.
+
+```{r gaz_raw, results="hide"}
+gaz_raw <-
+  read_delim(
+    "gazetteer.zip",
+    delim = "|"
+    #col_types = cols(.default = col_character())
+  )
+
+gaz_raw
+```
+
+2. Extract and rename the columns we want to keep into a `gaz` tibble.
+
+3. Convert the `gaz` columns to the appropriate type. Convert any placeholders for unknown data to `NA`.
+
+```{r gaz}
+gaz <-
+  transmute(gaz_raw,
+    id         = parse_integer(FEATURE_ID),
+    name       = FEATURE_NAME,
+    class      = FEATURE_CLASS,
+    state      = STATE_ALPHA,
+    county     = COUNTY_NAME,
+    lat        = parse_double(PRIM_LAT_DEC, na = "0"),
+    lon        = parse_double(PRIM_LONG_DEC, na = "0"),
+    src_lat    = parse_double(SOURCE_LAT_DEC),
+    src_lon    = parse_double(SOURCE_LONG_DEC),
+    elev       = parse_integer(ELEV_IN_M),
+    map        = parse_character(MAP_NAME, na = "Unknown"),
+    created_on = parse_date(DATE_CREATED, format = "%m/%d/%Y"),
+    edited_on  = parse_date(DATE_EDITED, format = "%m/%d/%Y")
+  )
+
+gaz
+```
+
+4. Delete from gaz rows where:
+
+    - the **primary** latitude or longitude are unknown
+    - the feature is not in California
+
+```{r gaz_CA_locs_only}
+gaz <-
+  filter(gaz,
+    !is.na(lon) &
+    !is.na(lat) &
+    state == "CA"
+  )
+
+gaz
+```
+
+5. Write the `gaz` tibble to a CSV file (using `|` as a delimiter).
+
+```{r CA_csv}
+wrote <- write_delim(gaz,
+  "gazetteer.csv",
+  delim = "|",
+  na = ""
+)
+
+wrote
+```
+
+## Analyze
+
+1. What is the most-frequently-occuring feature name?
+
+```{r most_frequent_names}
+gaz %>%
+  count(name) %>%
+  filter(n == max(n))
+```
+
+2. What is the least-frequently-occuring feature class?
+
+```{r least_frequent_classes}
+gaz %>%
+  count(class) %>%
+  filter(n == min(n))
+```
+
+3. What is the approximate center point of each county? 
+
+```{r county_center_points}
+gaz %>%
+  filter(!is.na(county)) %>%
+  group_by(county) %>%
+  summarize(
+    ctr_lon = (min(lon) + max(lon)) / 2,
+    ctr_lat = (min(lat) + max(lat)) / 2
+  )
+```
+
+4. What are the fractions of the total number of features in each county that are natural? man-made?
+
+    a. Create a tibble with 2 columns: feature class and feature category("natural", "man-made", or NA if we can't tell). Add 1 row for each unique feature class.
+
+```{r categories}
+categories <- tribble(
+  ~class,             ~category,
+  "Airport",          "manmade",
+  "Arch",             "natural",
+  "Area",             "natural",
+  "Arroyo",           "natural",
+  "Bar",              "natural",
+  "Basin",            "natural",
+  "Bay",              "natural",
+  "Beach",            "natural",
+  "Bench",            "natural",
+  "Bend",             "natural",
+  "Bridge",           "manmade",
+  "Building",         "manmade",
+  "Canal",            "manmade",
+  "Cape",             "natural",
+  "Cemetery",         "manmade",
+  "Census",           "manmade",
+  "Channel",          "natural",
+  "Church",           "manmade",
+  "Civil",            "manmade",
+  "Cliff",            "natural",
+  "Crater",           "natural",
+  "Crossing",         "manmade",
+  "Dam",              "manmade",
+  "Falls",            "natural",
+  "Flat",             "natural",
+  "Forest",           "natural",
+  "Gap",              "natural",
+  "Glacier",          "natural",
+  "Gut",              "natural",
+  "Harbor",           "manmade",
+  "Hospital",         "manmade",
+  "Island",           "natural",
+  "Isthmus",          "natural",
+  "Lake",             "natural",
+  "Lava",             "natural",
+  "Levee",            NA,
+  "Locale",           "manmade",
+  "Military",         "manmade",
+  "Mine",             "manmade",
+  "Oilfield",         "manmade",
+  "Park",             "manmade",
+  "Pillar",           "natural",
+  "Plain",            "natural",
+  "Populated Place",  "manmade",
+  "Post Office",      "manmade",
+  "Range",            "natural",
+  "Rapids",           "natural",
+  "Reserve",          "manmade",
+  "Reservoir",        "manmade",
+  "Ridge",            "natural",
+  "School",           "manmade",
+  "Sea",              "natural",
+  "Slope",            "natural",
+  "Spring",           "natural",
+  "Stream",           "natural",
+  "Summit",           "natural",
+  "Swamp",            "natural",
+  "Tower",            "manmade",
+  "Trail",            "manmade",
+  "Tunnel",           "manmade",
+  "Valley",           "natural",
+  "Well",             "manmade",
+  "Woods",            "natural"
+)
+
+categories
+```
+
+4. (cont'd)
+
+    b. Join the feature categories to the gazetteer and summarize categories by county.
+
+```{r feature_fractions_by_county}
+gaz %>%
+  select(county, class) %>%
+  filter(!is.na(county)) %>%
+  left_join(categories, by = "class") %>%
+  group_by(county) %>%
+  count(category) %>%
+  spread(key = category, value = n) %>%
+  left_join(count(gaz, county), by = "county") %>%
+  mutate(
+    frac_manmade = manmade / n,
+    frac_natural = natural / n
+  ) %>%
+  select(county, frac_manmade, frac_natural)
+```
