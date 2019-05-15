@@ -1,0 +1,199 @@
+---
+title: "Assignment_2"
+author: "Juliette Verstaen"
+date: "5/2/2019"
+output: pdf_document
+toc: true
+toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##A. Import and Tidy
+
+```{r}
+
+###load packages
+library(tidyverse)
+
+###set working directory to Assignment_1 folder
+getwd()
+
+###load in raw data
+parcels_raw <- 
+  read_csv("data/Santa_Barbara_County_parcels_2011.csv", 
+            col_types = cols(.default = col_character())) %>%
+  as_tibble()
+
+###select only columns of interest
+parcels <-
+  transmute(parcels_raw,
+    APN       = APN,
+    Situs1    = Situs1,
+    Situs2    = Situs2,
+    Acreage   = parse_double(Acreage, na = "0"),
+    UseCode   = UseCode,
+    NonTaxCode= NonTaxCode,
+    AgPres    = AgPres,
+    LandValue = parse_double(LandValue, na = "0"),
+    Net_Impr  = parse_double(Net_Impr, na = "0"),
+    Net_AV    = parse_double(Net_AV, na = "0"),
+    M_Address1 = M_Address1,
+    M_Address2 = M_Address2)
+
+###Convert all blanks in tibble to NAs    
+parcels[is.na(parcels)] <- NA
+
+```
+
+```{r}
+library(DBI)
+db <- dbConnect(RSQLite::SQLite(), dbname = "parcels.db")
+
+#call dbDisconnect() when finished working with a connection
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##B. Analyze
+
+###1. What are the 10 most-frequently-occuring land uses (in descending order)? 
+```{r}
+
+###load in use code data
+use_code <- read_delim("data/UseCodes.csv", 
+                       delim="|", 
+                       quote= "", 
+                       col_types = cols(.default = col_character()))
+use_code[is.na(use_code)] <- NA
+
+###combine the parcels data with the use code data
+parcels_codes <- left_join(parcels, use_code, by="UseCode")
+
+###count the most 10 most frequenctly occuring land uses
+top_10 <- parcels_codes %>%
+  count(UseCode) %>%
+  arrange(desc(n)) %>%
+  head(10) 
+
+###add the code descriptions to the top 10 counted so you know what they are
+B1_topfreq <-  left_join(top_10, use_code, by="UseCode") %>%
+  select("UseCode", "n", "CodeDesc")
+
+```
+
+###2. How many acres are in agricultural preserves?
+
+```{r}
+
+###choose only parcels that are agricultural preserves and have acreage values
+agpres <- parcels_codes %>%
+  filter(!is.na(AgPres)) %>%
+  filter(!is.na(Acreage)) 
+  
+###add up the number of acres in an ag preserve
+B2_agpres <- sum(agpres$Acreage)
+B2_agpres
+
+```
+
+###3. What is the mean net assessed value per acre of the entire county?
+add up cost of all peices and then divide by the area
+
+```{r}
+
+###pick out acreage and net average value of the parcels
+### remove any of the parcels that are less than or equal to 0, with the assumption that is incorrect/unknown data
+mean_county <- parcels_codes %>%
+  select("Acreage", "Net_AV") %>%
+  filter(Net_AV >=0)
+
+###make vectors of sum of average value and sum of acreage
+sum_av <- sum(mean_county$Net_AV)
+sum_ac <- sum(mean_county$Acreage)
+
+###math for average price/acre
+B3_meannv <- sum_av/sum_ac
+B3_meannv
+
+```
+
+###4. What is the total net assessed value of all non-taxable parcels?
+
+```{r}
+
+###keep only parcels that are non-taxable
+mean_nontax <- parcels_codes%>%
+  filter(!is.na(NonTaxCode))
+
+###Find the total net assessed value
+B4_totalnontax <- sum(mean_nontax$Net_AV)
+
+B4_totalnontax
+
+```
+
+
+###5. What are the 10 largest property holders, by acreage? 
+
+on 5 and 6, some owners can own multiple parcels - need to combine all parcels for each owner (try group_by() %>% summarize() %>% ungroup()) (-1 pt each)
+
+
+```{r}
+
+###Keep only properties that have full mailing addresses and keep top 10 acreage wise
+B5_topacre <- parcels_codes%>%
+  filter(!is.na(M_Address1)) %>%
+  filter(!is.na(M_Address2)) %>%
+  unite(address, c("M_Address1", "M_Address2"), sep = " ") %>%
+  group_by(address) %>%
+  summarize(Acreage=sum(Acreage)) %>%
+  ungroup() %>%
+  arrange(desc(Acreage)) %>%
+  head(10)%>%
+  select("address", "Acreage")
+
+B5_topacre
+
+###how did san fransisco make it into the SB county data??
+### because people can live in SF but own land in SB. right, answering my own questions!
+
+```
+
+###6. What are the 10 largest property holders, by net assessed value?
+
+```{r}
+
+###Keep only properties that have full mailing addresses and keep top 10 net assessed value wise
+B6_topnv <- parcels_codes%>%
+  filter(!is.na(M_Address1)) %>%
+  filter(!is.na(M_Address2)) %>%
+  unite(address, c("M_Address1", "M_Address2"), sep = " ") %>%
+  group_by(address) %>%
+  summarize(Net_AV=sum(Net_AV)) %>%
+  ungroup() %>%
+  arrange(desc(Net_AV)) %>%
+  head(10) %>%
+  select("address", "Net_AV")
+
+B6_topnv
+
+```

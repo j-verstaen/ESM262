@@ -1,0 +1,366 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+connect Rmd SQL chunk to SQLite database
+
+```{r}
+library(DBI)
+db <- dbConnect(RSQLite::SQLite(), dbname = "survey.db") #SQLite is a function that tells us how to talk to a database..."survey.db". This is staying conneted to the file. We can pass in functions that allow us to connect to any kind of database/ Generic way of doing this. "db" is opaque, but can be passed to other databases.
+```
+
+## 1. [Selecting Data](https://swcarpentry.github.io/sql-novice-survey/01-select/index.html)
+
+```{bash} 
+#Fires up a bash in R
+echo '.tables' | sqlite3 survey.db #echo tables being passed to sqlite. Firing up a connection to the db database and giving it a specific command. Dummest way possible to talk to a database. This is  a brutforce fallback. This bash snippet goes away.
+```
+
+```{sql connection=db}
+--a different way to pull in the table headers
+SELECT name AS tables FROM sqlite_master WHERE type = 'table' 
+```
+
+```{bash}
+echo '.schema' | sqlite3 survey.db
+```
+```{sql connection=db}
+SELECT sql AS schema FROM sqlite_master
+```
+
+```{sql connection=db}
+SELECT family, personal FROM Person;
+```
+
+```{sql connection=db}
+--only  a single case in SQL
+SeLeCt FaMiLy, PeRsOnAl FrOm PeRsOn;
+```
+
+```{sql connection=db}
+SELECT personal, family FROM Person;
+```
+
+```{sql connection=db}
+--column you specify is what you get back; here you get is back 3 times. renames columns to be a "legal table". Qualify table names.
+SELECT id, id, id FROM Person;
+```
+
+```{sql connection=db}
+--selects everything if you don't set a limit. There's no guarentee of order. Syntax is always select column from table. 
+SELECT * FROM Person LIMIT 3;
+```
+
+## 2. [Sorting and Removing Duplicates](https://swcarpentry.github.io/sql-novice-survey/02-sort-dup/index.html)
+
+```{sql connection=db}
+--what quantities were being measured
+SELECT quant FROM Survey;
+```
+
+```{sql connection=db}
+--only get back one value for each unique value. Every time you write an sql statement, you are answering a quest,
+SELECT DISTINCT quant FROM Survey;
+```
+
+```{sql connection=db}
+SELECT DISTINCT taken, quant FROM Survey;
+```
+
+```{sql connection=db}
+--sorting. All of person, sorted by ID. Values are literal so case matters
+SELECT * FROM Person ORDER BY id;
+```
+
+```{sql connection=db}
+--reversing the order
+SELECT * FROM person ORDER BY id DESC;
+```
+
+```{sql connection=db}
+
+SELECT taken, person, quant FROM Survey ORDER BY taken ASC, person DESC;
+```
+
+```{sql connection=db}
+SELECT DISTINCT quant, person FROM Survey ORDER BY quant ASC;
+```
+
+```{sql connection = db}
+--select *from visited;
+--select distinct dated from visited;
+select * from person;
+```
+
+
+## 3. [Filtering](https://swcarpentry.github.io/sql-novice-survey/03-filter/index.html)
+
+```{sql connection=db}
+SELECT * FROM Visited WHERE site = 'DR-1';
+
+--columns (select) and row (site). Need quotes around text. Select process is a two-stage slice and dice - WHERE reduces data by pulling out rows and then pulls out selected columns.
+```
+
+```{sql connection=db}
+SELECT id FROM Visited WHERE site = 'DR-1';
+```
+
+```{sql connection=db}
+--both a row and a column filter
+SELECT * FROM Visited WHERE site = 'DR-1' AND dated < '1930-01-01';
+```
+
+```{sql connection=db}
+SELECT * FROM Survey WHERE person = 'lake' OR person = 'roe';
+```
+
+```{sql connection=db}
+--IN does tests for membership. Whether a value is part of a set.
+SELECT * FROM Survey WHERE person IN ('lake', 'roe');
+```
+
+```{sql connection=db}
+--AND binds tighter than OR. To force an evaluation, use parenthesis. 
+SELECT * FROM Survey WHERE quant = 'sal' AND person = 'lake' OR person = 'roe';
+```
+
+```{sql connection=db}
+SELECT * FROM Survey WHERE quant = 'sal' AND (person = 'lake' OR person = 'roe');
+```
+
+```{sql connection=db}
+--Partial match. "DR%" means % = from here on match anything. Need the LIKE operator in order from % to be activated this way.This is a fuzzy match.
+SELECT * FROM Visited WHERE site LIKE 'DR%';
+```
+
+```{sql connection=db}
+--pulling it all together.
+SELECT DISTINCT person, quant FROM Survey WHERE person = 'lake' OR person = 'roe';
+```
+
+```{sql connection=db}
+
+SELECT * FROM Site WHERE (lat > -48) OR (lat < 48);
+--doesn't work because it needs to be AND. This says look for everything (OR). Says "pick any sites, if the lat is greater than 48 than it is legal OR less that 48 north is also legal = the whole planet"
+
+```
+
+
+
+## 4. [Calculating New Values](https://swcarpentry.github.io/sql-novice-survey/04-calc/index.html)
+
+```{sql connection=db}
+--want to get the reading column but multiply the values by 1.05. This is a new table whose existance is temporary, not being saved in the database. SQL renames the column. 
+SELECT 1.05 * reading FROM Survey WHERE quant = 'rad';
+```
+
+```{sql connection=db}
+SELECT taken, round(5 * (reading - 32) / 9, 2) FROM Survey WHERE quant = 'temp';
+```
+
+```{sql connection=db}
+--one the new titles start getting complicated, the default names can be usless. To give a meaningful name, us "AS" operator
+
+SELECT taken, round(5 * (reading - 32) / 9, 2) AS Celsius FROM Survey WHERE quant = 'temp';
+```
+
+```{sql connection=db}
+--pasting columns together, concatinating. Take value of the personal column, add a space, and then add on the family column
+--SELECT personal || ' ' || family FROM Person;
+
+SELECT personal || ' ' || family AS full_name FROM Person;
+```
+
+```{sql connection=db}
+
+--"union" joins together the results of the two selections...table must be the same shape. COuld have used OR. 
+SELECT * FROM Person WHERE id = 'dyer' UNION SELECT * FROM Person WHERE id = 'roe';
+```
+
+```{sql connection=db}
+SELECT DISTINCT site FROM Visited;
+```
+
+## 5. [Missing Data](https://swcarpentry.github.io/sql-novice-survey/05-null/index.html)
+
+```{sql connection=db}
+SELECT * FROM Visited;
+--address the NULL value. NULL will fail all logical tests. Need to isolate with sepecific functions
+```
+
+```{sql connection=db}
+SELECT * FROM Visited WHERE dated < '1930-01-01';
+```
+
+```{sql connection=db}
+SELECT * FROM Visited WHERE dated >= '1930-01-01';
+```
+
+```{sql connection=db}
+SELECT * FROM Visited WHERE dated = NULL;
+```
+
+```{sql connection=db}
+SELECT * FROM Visited WHERE dated != NULL;
+--doesn't work
+```
+
+```{sql connection=db}
+--need to use the IS operator to isolate the NULL
+SELECT * FROM Visited WHERE dated IS NULL;
+```
+
+```{sql connection=db}
+SELECT * FROM Visited WHERE dated IS NOT NULL;
+```
+
+```{sql connection=db}
+SELECT * FROM Visited WHERE dated IN ('1927-02-08', NULL);
+```
+
+
+```{sql connection=db}
+SELECT * FROM Visited where dated IS not null order by dated asc;
+--sort and remove NULL
+```
+
+## 6. [Aggregation](https://swcarpentry.github.io/sql-novice-survey/06-agg/index.html)
+
+```{sql connection=db}
+--Arregrates allow you to collapse a column into a single value. Sums, averages, mins, max median. Every time you use an arrgrgate operator, you will get one row back.
+SELECT dated FROM Visited;
+```
+
+```{sql connection=db}
+SELECT min(dated) FROM Visited;
+```
+
+```{sql connection=db}
+SELECT max(dated) FROM Visited;
+```
+
+```{sql connection=db}
+SELECT avg(reading) FROM Survey WHERE quant = 'sal';
+```
+
+```{sql connection=db}
+SELECT count(reading) FROM Survey WHERE quant = 'sal';
+```
+
+```{sql connection=db}
+SELECT sum(reading) FROM Survey WHERE quant = 'sal';
+```
+
+```{sql connection=db}
+SELECT min(reading), max(reading) FROM Survey WHERE quant = 'sal' AND reading <= 1.0;
+```
+
+```{sql connection=db}
+--count(*) means count up the full selection. "Person" is misleading. Want to give counts BY person. This is like group_by. 
+SELECT person, count(*) FROM Survey WHERE quant = 'sal' AND reading <= 1.0;
+```
+
+```{sql connection=db}
+--This WHERE clause yields nothing.
+SELECT person, max(reading), sum(reading) FROM Survey WHERE quant = 'missing';
+```
+
+```{sql connection=db}
+SELECT min(dated) FROM Visited;
+```
+
+```{sql connection=db}
+--Aggregate operators are different in SQL in that they ignore NULLS
+SELECT min(dated) FROM Visited WHERE dated IS NOT NULL;
+```
+
+```{sql connection=db}
+--a common style of writing SQL
+SELECT person, count(reading), round(avg(reading), 2)
+FROM   Survey
+WHERE  quant = 'rad';
+```
+
+```{sql connection=db}
+--restricting rows we are processing to a specific person/row.
+SELECT person, count(reading), round(avg(reading), 2)
+FROM  Survey
+WHERE quant = 'rad'
+AND   person = 'dyer';
+```
+
+```{sql connection=db}
+--group by (after where) "where" pulls the rows out and "group" puts them in piles. Aggregating for each unique value of person. Need to ungroup when you are done only when you save in the database - that is not necessary here
+SELECT   person, count(reading), round(avg(reading), 2)
+FROM     Survey
+WHERE    quant = 'rad'
+GROUP BY person;
+```
+
+```{sql connection=db}
+SELECT   person, quant, count(reading), round(avg(reading), 2)
+FROM     Survey
+GROUP BY person, quant;
+--These Nulls are different than measurement nulls
+```
+
+```{sql connection=db}
+--taking on the person NULLS, sort alphbetically 
+SELECT   person, quant, count(reading), round(avg(reading), 2)
+FROM     Survey
+WHERE    person IS NOT NULL
+GROUP BY person, quant
+ORDER BY person, quant;
+```
+
+```{sql connection=db}
+--take average value and then subtract that from any individual reading. Only got one value back because averages all readings, and then used this value and subtracting the average from it. But we wanted this for every silgle reading value. 
+SELECT reading - avg(reading) FROM Survey WHERE quant = 'rad';
+```
+
+```{sql connection=db}
+--Use a nested select to get aound this. This usage of select did the parenthesis first and THEN subtracted this from all of the "reading" rows.
+SELECT reading - (SELECT avg(reading) FROM Survey WHERE quant = 'rad')
+FROM   Survey
+WHERE  quant = 'rad'
+```
+
+## 7. [Combining Data](https://swcarpentry.github.io/sql-novice-survey/07-join/index.html)
+
+```{sql connection=db}
+--Joins = select columns from tables. Gave us every possible combination and kept all column. But we want to join based on key matching columns.
+SELECT * FROM Site JOIN Visited;
+```
+
+```{sql connection=db}
+SELECT * FROM Site JOIN Visited ON Site.name = Visited.site;
+--column.table. Connecting two tables and only rows that match by site. Join by "name" and "site" in the two different tables. Databases make it easy to split and join. Golden role is to not say it more than once.
+```
+
+```{sql connection=db}
+--answering questions: pull out the columns we are interested in. 
+SELECT Site.lat, Site.long, Visited.dated
+FROM   Site JOIN Visited
+ON     Site.name = Visited.site;
+```
+
+```{sql connection=db}
+-- reassembling - this is what queries are all about.
+SELECT Site.lat, Site.long, Visited.dated, Survey.quant, Survey.reading
+FROM   Site JOIN Visited JOIN Survey
+ON     Site.name = Visited.site
+AND    Visited.id = Survey.taken
+AND    Visited.dated IS NOT NULL;
+```
+
+```{sql connection=db}
+SELECT rowid, * FROM Person;
+```
+
+```{sql connection=db}
+SELECT Site.name
+FROM   Site JOIN Visited
+ON     Site.lat <- 49.0
+AND    Site.name = Visited.site
+AND    Visited.dated >= '1932-01-01';
+```
