@@ -13,8 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ##A. Import and Tidy
 
+SB county parcels data
 ```{r}
-
 ###load packages
 library(tidyverse)
 
@@ -45,155 +45,122 @@ parcels <-
 
 ###Convert all blanks in tibble to NAs    
 parcels[is.na(parcels)] <- NA
-
 ```
 
+Use code data
 ```{r}
-library(DBI)
-db <- dbConnect(RSQLite::SQLite(), dbname = "parcels.db")
-
-#call dbDisconnect() when finished working with a connection
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##B. Analyze
-
-###1. What are the 10 most-frequently-occuring land uses (in descending order)? 
-```{r}
-
 ###load in use code data
 use_code <- read_delim("data/UseCodes.csv", 
                        delim="|", 
                        quote= "", 
                        col_types = cols(.default = col_character()))
+
 use_code[is.na(use_code)] <- NA
+```
 
-###combine the parcels data with the use code data
-parcels_codes <- left_join(parcels, use_code, by="UseCode")
 
-###count the most 10 most frequenctly occuring land uses
-top_10 <- parcels_codes %>%
-  count(UseCode) %>%
-  arrange(desc(n)) %>%
-  head(10) 
+Creating a connection to SQLite and a parcels database
+```{r}
+library(DBI)
+  ###establish connection
+db <- dbConnect(RSQLite::SQLite(), 
+                dbname = "parcels.db")
 
-###add the code descriptions to the top 10 counted so you know what they are
-B1_topfreq <-  left_join(top_10, use_code, by="UseCode") %>%
-  select("UseCode", "n", "CodeDesc")
+  ###add in parcels data table
+dbWriteTable(conn = db, name = "parcels", value = parcels, overwrite = TRUE)
+
+  ###add in use code data table
+dbWriteTable(conn = db, name = "use_code", value = use_code, overwrite = TRUE)
+
+  ### arguments within the dbWriteTable()
+  ### the first argument is the connection handle;
+
+  ### the second is the name for the table inside the database; 
+
+  ### the third is the dataframe with all your beautifully processed data.
+
+dbListTables(db) ### double checking that tables are there. YAY it works
+#dbDisconnect(db)
+```
+
+##B. Analyze the data using SQL
+
+###1.What are the 10 most-frequently-occuring land uses (in descending order)?
+```{sql connection=db}
+
+SELECT parcels.UseCode, use_code.CodeDesc
+FROM   parcels JOIN use_code
+ON     parcels.UseCode = use_code.UseCode
+Group BY use_code.CodeDesc;
+Select count(CodeDesc);
+
+
+SELECT parcels.UseCode, use_code.CodeDesc, COUNT(use_code.CodeDesc) from table group by use_code.CodeDesc
+FROM  parcels JOIN use_code 
+ON    parcels.UseCode = use_code.UseCode;
+GROUP BY use_code.CodeDesc
+
+select name, count(*) from table group by name
+
+
 
 ```
+
+
 
 ###2. How many acres are in agricultural preserves?
+```{sql connection=db}
 
-```{r}
-
-###choose only parcels that are agricultural preserves and have acreage values
-agpres <- parcels_codes %>%
-  filter(!is.na(AgPres)) %>%
-  filter(!is.na(Acreage)) 
-  
-###add up the number of acres in an ag preserve
-B2_agpres <- sum(agpres$Acreage)
-B2_agpres
+SELECT sum(Acreage)
+FROM   parcels JOIN use_code
+ON     parcels.UseCode = use_code.UseCode
+WHERE AgPres IS NOT NULL;
 
 ```
+
 
 ###3. What is the mean net assessed value per acre of the entire county?
-add up cost of all peices and then divide by the area
-
-```{r}
-
-###pick out acreage and net average value of the parcels
-### remove any of the parcels that are less than or equal to 0, with the assumption that is incorrect/unknown data
-mean_county <- parcels_codes %>%
-  select("Acreage", "Net_AV") %>%
-  filter(Net_AV >=0)
-
-###make vectors of sum of average value and sum of acreage
-sum_av <- sum(mean_county$Net_AV)
-sum_ac <- sum(mean_county$Acreage)
-
-###math for average price/acre
-B3_meannv <- sum_av/sum_ac
-B3_meannv
+    i.e., as if the entire county were a single parcel.
+```{sql connection=db}
 
 ```
+
 
 ###4. What is the total net assessed value of all non-taxable parcels?
-
-```{r}
-
-###keep only parcels that are non-taxable
-mean_nontax <- parcels_codes%>%
-  filter(!is.na(NonTaxCode))
-
-###Find the total net assessed value
-B4_totalnontax <- sum(mean_nontax$Net_AV)
-
-B4_totalnontax
+   Assume non-taxable parcels are indicated by non-NA values for NonTaxCode.
+```{sql connection=db}
 
 ```
 
 
-###5. What are the 10 largest property holders, by acreage? 
+###5. What are the 10 largest property holders, by acreage?
+SELECT DISTINCT taken, quant FROM Survey; choose only certain addresses pairs
 
-on 5 and 6, some owners can own multiple parcels - need to combine all parcels for each owner (try group_by() %>% summarize() %>% ungroup()) (-1 pt each)
+SELECT * FROM Person ORDER BY id DESC; for ordering propert by size
 
+    Use the complete mailing address for tax statements as a proxy for the parcel owner. Ignore parcels where either component of the address is NA.
 
-```{r}
-
-###Keep only properties that have full mailing addresses and keep top 10 acreage wise
-B5_topacre <- parcels_codes%>%
-  filter(!is.na(M_Address1)) %>%
-  filter(!is.na(M_Address2)) %>%
-  unite(address, c("M_Address1", "M_Address2"), sep = " ") %>%
-  group_by(address) %>%
-  summarize(Acreage=sum(Acreage)) %>%
-  ungroup() %>%
-  arrange(desc(Acreage)) %>%
-  head(10)%>%
-  select("address", "Acreage")
-
-B5_topacre
-
-###how did san fransisco make it into the SB county data??
-### because people can live in SF but own land in SB. right, answering my own questions!
+```{sql connection=db}
 
 ```
 
 ###6. What are the 10 largest property holders, by net assessed value?
-
-```{r}
-
-###Keep only properties that have full mailing addresses and keep top 10 net assessed value wise
-B6_topnv <- parcels_codes%>%
-  filter(!is.na(M_Address1)) %>%
-  filter(!is.na(M_Address2)) %>%
-  unite(address, c("M_Address1", "M_Address2"), sep = " ") %>%
-  group_by(address) %>%
-  summarize(Net_AV=sum(Net_AV)) %>%
-  ungroup() %>%
-  arrange(desc(Net_AV)) %>%
-  head(10) %>%
-  select("address", "Net_AV")
-
-B6_topnv
+```{sql connection=db}
 
 ```
+
+Close the sql database connection
+```{sql connection=db}
+dbDisconnect(db)
+```
+
+
+
+
+
+
+
+
+
+
+
