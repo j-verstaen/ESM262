@@ -80,7 +80,7 @@ dbWriteTable(conn = db, name = "use_code", value = use_code, overwrite = TRUE)
   ### the third is the dataframe with all your beautifully processed data.
 
 dbListTables(db) ### double checking that tables are there. YAY it works
-#dbDisconnect(db)
+
 ```
 
 ##B. Analyze the data using SQL
@@ -97,8 +97,6 @@ LIMIT 10;
 
 ```
 
-
-
 ###2. How many acres are in agricultural preserves?
 ```{sql connection=db}
 
@@ -108,7 +106,6 @@ ON     parcels.UseCode = use_code.UseCode
 WHERE AgPres IS NOT NULL;
 
 ```
-
 
 ###3. What is the mean net assessed value per acre of the entire county?
 
@@ -121,7 +118,6 @@ WHERE Net_AV >=0;
 
 ```
 
-
 ###4. What is the total net assessed value of all non-taxable parcels?
    Assume non-taxable parcels are indicated by non-NA values for NonTaxCode.
 ```{sql connection=db}
@@ -132,7 +128,6 @@ ON     parcels.UseCode = use_code.UseCode
 WHERE  NonTaxCode IS NOT NULL AND Net_AV >=0 ;
 
 ```
-
 
 ###5. What are the 10 largest property holders, by acreage?
 
@@ -162,7 +157,11 @@ LIMIT 10;
 ```
 
 Close the sql database connection
+```{r}
 dbDisconnect(db)
+```
+
+
 
 
 
