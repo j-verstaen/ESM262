@@ -1,0 +1,34 @@
+---
+title: "functions_assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##  <span style="color:green"> Assignment \span
+
+Work in pairs
+
+Write a function that takes as input
+
+*a table that has prices for different fish
+* a table that has the number caught for each fish
+species for each location
+* each location is in a different column
+* each fish is in a different row 
+
+Function output will be
+
+* most frequently caught fish in each location
+* total revenue for each location
+* total fisheries revenue sum
+
+* if user requests it graph of revenue by location and total revenue (as text)
+
+
+Place your function in an *.R file
+
+Generate some example data for your function; and show how this is created and used in an R markdown document
+Submit as usual as a git link on gauchospace

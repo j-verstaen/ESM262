@@ -1,0 +1,87 @@
+---
+title: "Functions"
+author: "Juliette Verstaen"
+date: "5/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Lower Rolling Coefficient
+```{r}
+source("R/auto_power.R")
+
+# generate sample speeds from a distribution
+nsample = 1000
+speeds = rnorm(mean=25, sd=4, n=nsample)
+
+#create a dataframe that has rows for each model run
+# columns for height, flowrate and power estimate
+results = data.frame(speed=speeds, power=NA)
+head(results)
+
+# to create a set of outputs
+# reduced c rolling by 50%
+results$power = auto_power(v=speeds, a=25, m=20000, c_roll= 0.015/2)
+
+# check results!
+ggplot(results, aes(speed, power/1000))+geom_point()+labs(x="speed in m/s", y="power in kW")
+ggplot(results, aes(x="Across Speed",y=power/1000))+geom_boxplot()+labs(y="power in kW")
+
+# but what if we were sampling different cars
+possible_cars = data.frame(mass=c(31000,45000,38000), area = c(25,30,22))
+
+# do conversion to meters per seconds
+speed_base = 100 * 0.28
+
+# because I have one mass and area for each car there will be a unique speed, I can
+# add to the data structure
+possible_cars$power = auto_power(v=speed_base, a = possible_cars$area, m=possible_cars$area)
+                         
+ggplot(possible_cars, aes(x=mass, y=power, fill=mass))+geom_col()+labs(y="Power W", x="Mass (kg)")
+
+
+# what is I want to estimate average power use given a range of speeds and different probabilities of particular cars
+
+# define probablity, must sum to 1 ?
+# why
+possible_cars$prob = c(0.4, 0.4, 0.2)
+
+
+# use sample to generate test cases
+# first generate our data structure
+# assume log normal distribution of speeds with mean 100km/hr
+# recall our function needs m/s
+m = log(100*0.277)
+nsample = 100
+speeds = rlnorm(mean=m, sd=0.1*m, nsample)
+summary(speeds)
+
+results = data.frame(speed=speeds, power=NA)
+
+possible_cars$row = seq(from=1, to=nrow(possible_cars))
+
+whichcar = base::sample(possible_cars$row, size=nsample, prob=possible_cars$prob, replace=TRUE)
+
+# what is whichcar?
+head(whichcar)
+
+results$mass = possible_cars$mass[whichcar]
+
+head(results)
+
+# add area
+results$area = possible_cars$area[whichcar]
+
+# power for all of our samples of speed and car type
+results$power = auto_power(a=results$area, v=results$speed, m=results$mass)
+
+summary <- summary(results$power)
+ggplot(results,aes(x="", y=power/1000))+geom_boxplot(fill="red")+labs("Power kW")
+
+
+```
+```
+

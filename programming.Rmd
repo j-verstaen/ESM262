@@ -1,0 +1,48 @@
+---
+title: "programming"
+author: "Juliette Verstaen"
+date: "5/17/2019"
+output: html_document
+---
+
+Class work/notes
+Naomi markdown is index.Rmd
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+source("auto_power.R")
+
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+
+power <- auto_power(m=31752, v=30, a=2.5)
+power
+
+```
+
+```{r}
+
+table <- data.frame(vel = seq(1,100)) %>%
+  mutate(power = auto_power(m=31752, v=vel, a=2.5))
+
+plot <- ggplot(table) +
+  geom_point(aes(x=vel, y=power)) +
+  theme_classic() +
+  ggtitle("Automobile Power")
+
+plot
+
+```
+
+
+
+
+
+
