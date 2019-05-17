@@ -162,6 +162,16 @@ dbDisconnect(db)
 ```
 
 
+For your viewing pleasure
+```{r}
+
+library(knitr) 
+include_graphics("2.png")
+include_graphics("3.png")
+include_graphics("4.png")
+
+```
+
 
 
 
