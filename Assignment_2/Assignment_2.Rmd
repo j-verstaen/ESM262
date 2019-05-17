@@ -88,21 +88,12 @@ dbListTables(db) ### double checking that tables are there. YAY it works
 ###1.What are the 10 most-frequently-occuring land uses (in descending order)?
 ```{sql connection=db}
 
-SELECT parcels.UseCode, use_code.CodeDesc
-FROM   parcels JOIN use_code
-ON     parcels.UseCode = use_code.UseCode
-Group BY use_code.CodeDesc;
-Select count(CodeDesc);
-
-
-SELECT parcels.UseCode, use_code.CodeDesc, COUNT(use_code.CodeDesc) from table group by use_code.CodeDesc
+SELECT CodeDesc, COUNT(CodeDesc) AS Appearances
 FROM  parcels JOIN use_code 
-ON    parcels.UseCode = use_code.UseCode;
-GROUP BY use_code.CodeDesc
-
-select name, count(*) from table group by name
-
-
+ON    parcels.UseCode = use_code.UseCode
+GROUP BY CodeDesc  
+ORDER BY Appearances DESC
+LIMIT 10;
 
 ```
 
@@ -120,8 +111,13 @@ WHERE AgPres IS NOT NULL;
 
 
 ###3. What is the mean net assessed value per acre of the entire county?
-    i.e., as if the entire county were a single parcel.
+
 ```{sql connection=db}
+
+SELECT round(sum(Net_AV)/sum(Acreage), 2)
+FROM   parcels JOIN use_code
+ON     parcels.UseCode = use_code.UseCode
+WHERE Net_AV >=0;
 
 ```
 
@@ -130,33 +126,43 @@ WHERE AgPres IS NOT NULL;
    Assume non-taxable parcels are indicated by non-NA values for NonTaxCode.
 ```{sql connection=db}
 
+SELECT sum(Net_AV)
+FROM   parcels JOIN use_code
+ON     parcels.UseCode = use_code.UseCode
+WHERE  NonTaxCode IS NOT NULL AND Net_AV >=0 ;
+
 ```
 
 
 ###5. What are the 10 largest property holders, by acreage?
-SELECT DISTINCT taken, quant FROM Survey; choose only certain addresses pairs
-
-SELECT * FROM Person ORDER BY id DESC; for ordering propert by size
-
-    Use the complete mailing address for tax statements as a proxy for the parcel owner. Ignore parcels where either component of the address is NA.
 
 ```{sql connection=db}
+
+SELECT parcels.M_Address1, parcels.M_Address2, sum(Acreage)
+FROM   parcels JOIN use_code
+ON     parcels.UseCode = use_code.UseCode
+WHERE M_Address1 IS NOT NULL OR M_Address2 IS NOT NULL
+GROUP BY parcels.M_Address1, parcels.M_Address2
+Order By sum(Acreage) DESC
+LIMIT 10;
 
 ```
 
 ###6. What are the 10 largest property holders, by net assessed value?
 ```{sql connection=db}
 
+SELECT parcels.M_Address1, parcels.M_Address2, sum(Net_AV)
+FROM   parcels JOIN use_code
+ON     parcels.UseCode = use_code.UseCode
+WHERE M_Address1 IS NOT NULL OR M_Address2 IS NOT NULL
+GROUP BY parcels.M_Address1, parcels.M_Address2
+Order By sum(Net_AV) DESC
+LIMIT 10;
+
 ```
 
 Close the sql database connection
-```{sql connection=db}
 dbDisconnect(db)
-```
-
-
-
-
 
 
 
