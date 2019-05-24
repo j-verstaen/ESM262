@@ -2,7 +2,7 @@
 title: "Functions"
 author: "Juliette Verstaen"
 date: "5/17/2019"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
