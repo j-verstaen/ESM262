@@ -9,78 +9,80 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Lower Rolling Coefficient
 ```{r}
+
+library(tidyverse)
 source("R/auto_power.R")
 
-# generate sample speeds from a distribution
-nsample = 1000
-speeds = rnorm(mean=25, sd=4, n=nsample)
+### generate sample speeds from a distribution
+nsample <-  10000
+meanspeed <- 100 / 3.6 ### mean speed is 100 km/h
+meanspeed_reduced <- 80 / 3.6 ### mean speed is 80 km/h
+lowered_croll <- 0.015/2
 
-#create a dataframe that has rows for each model run
-# columns for height, flowrate and power estimate
-results = data.frame(speed=speeds, power=NA)
-head(results)
+### generate speeds
+speeds <-  rnorm(mean = meanspeed, sd = meanspeed*0.1, n = nsample)
+speeds_reduced <- rnorm(mean = meanspeed_reduced, sd = meanspeed*0.1, n = nsample)
 
-# to create a set of outputs
-# reduced c rolling by 50%
-results$power = auto_power(v=speeds, a=25, m=20000, c_roll= 0.015/2)
+### sampling different cars
+possible_cars <-  data.frame(mass=c(31000,45000,38000), area = c(25,30,22))
 
-# check results!
-ggplot(results, aes(speed, power/1000))+geom_point()+labs(x="speed in m/s", y="power in kW")
-ggplot(results, aes(x="Across Speed",y=power/1000))+geom_boxplot()+labs(y="power in kW")
+# use model to generate power for the possible cars
+possible_cars$power <-  auto_power(v=meanspeed, a = possible_cars$area, m=possible_cars$area)
 
-# but what if we were sampling different cars
-possible_cars = data.frame(mass=c(31000,45000,38000), area = c(25,30,22))
+### define probablity of each car in the world we created where there's only 3 cars!
+possible_cars$prob <-  c(0.4, 0.4, 0.2)
 
-# do conversion to meters per seconds
-speed_base = 100 * 0.28
-
-# because I have one mass and area for each car there will be a unique speed, I can
-# add to the data structure
-possible_cars$power = auto_power(v=speed_base, a = possible_cars$area, m=possible_cars$area)
-                         
-ggplot(possible_cars, aes(x=mass, y=power, fill=mass))+geom_col()+labs(y="Power W", x="Mass (kg)")
-
-
-# what is I want to estimate average power use given a range of speeds and different probabilities of particular cars
-
-# define probablity, must sum to 1 ?
-# why
-possible_cars$prob = c(0.4, 0.4, 0.2)
-
-
-# use sample to generate test cases
-# first generate our data structure
-# assume log normal distribution of speeds with mean 100km/hr
-# recall our function needs m/s
-m = log(100*0.277)
-nsample = 100
-speeds = rlnorm(mean=m, sd=0.1*m, nsample)
 summary(speeds)
 
-results = data.frame(speed=speeds, power=NA)
+results <-  data.frame(speed=speeds, speeds_reduced = speeds_reduced)
 
-possible_cars$row = seq(from=1, to=nrow(possible_cars))
+### assign each car an id
+possible_cars$row <-  seq(from=1, to=nrow(possible_cars))
 
-whichcar = base::sample(possible_cars$row, size=nsample, prob=possible_cars$prob, replace=TRUE)
+whichcar <-  base::sample(possible_cars$row, size=nsample, prob=possible_cars$prob, replace=TRUE)
 
-# what is whichcar?
+### look at the data you generated
 head(whichcar)
 
-results$mass = possible_cars$mass[whichcar]
+results$mass <-  possible_cars$mass[whichcar]
 
 head(results)
 
-# add area
 results$area = possible_cars$area[whichcar]
 
-# power for all of our samples of speed and car type
-results$power = auto_power(a=results$area, v=results$speed, m=results$mass)
+### get the power for all the cars speeds we generated
+### rolling_power uses speeds with mean 100 km/h and the lowered rolling coefficient
+results$rolling_power = auto_power(a=results$area, v=results$speed, m=results$mass, c_roll = lowered_croll)
 
-summary <- summary(results$power)
-ggplot(results,aes(x="", y=power/1000))+geom_boxplot(fill="red")+labs("Power kW")
+### lower_speed power uses a different set of randomly generated speeds (speeds_reduced) and the normal rolling coefficient
 
+results$lower_speed_power = auto_power(a=results$area, v=results$speeds_reduced, m=results$mass)
+
+summary(results$rolling_power)
+summary(results$lower_speed_power)
+
+```
+
+Graphs!!
+```{r}
+
+results_graph <- results %>% 
+  select(rolling_power, lower_speed_power) %>% 
+  gather(key = "Scenario", value = "Power" )
+
+ggplot(results_graph) +
+  geom_histogram(aes(x = Power/1000))+
+  facet_wrap(~Scenario) +
+  theme_classic()
+
+ggplot(results_graph) +
+  geom_boxplot(aes(y = Power/1000))+
+  facet_wrap(~Scenario) +
+  theme_classic()
+
+mean(results$rolling_power)/1000 ### 182.5571 kW reduced resistance
+mean(results$lower_speed_power)/1000 ### 178.4378 kW reduced speed
 
 ```
 ```
