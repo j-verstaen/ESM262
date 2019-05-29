@@ -1,0 +1,96 @@
+---
+title: "Assignment_4"
+author: "Juliette Verstaen"
+date: "5/28/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Write a function that takes as input
+
+a table that has prices for different fish a table that has the number caught for each fish species for each location * each location is in a different column * each fish is in a different row
+
+Function output will be
+
+    most frequently caught fish in each location
+    total revenue for each location
+
+    total fisheries revenue sum
+
+    if user requests it graph of revenue by location and total revenue (as text)
+
+Place your function in an *.R file Make a package that contains this function
+
+Generate some example data for your function; and show how this is created and used in an R markdown document Submit package and Rmarkdown as usual as a git link on gauchospace
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+### Create test data
+```{r}
+
+### create vector of possible fish 
+possible.fish = c("parrotfish","unicornfish","bonito","yellowfin","swordfish")
+
+###Fish Catch Data
+### number of fish caught on northside
+catch_north <- sample(possible.fish, size=20, replace=T) %>%
+  as_tibble %>%
+  group_by(value) %>%
+  count()
+
+colnames(catch_north) <- c("fish", "north")
+
+### number of fish caught on eastside
+catch_east <- sample(possible.fish, size=20, replace=T) %>%
+  as_tibble %>%
+  group_by(value) %>%
+  count()
+
+colnames(catch_east) <- c("fish", "east")
+
+### number of fish caught on westside
+catch_west <- sample(possible.fish, size=20, replace=T) %>%
+  as_tibble %>%
+  group_by(value) %>%
+  count()
+
+colnames(catch_west) <- c("fish", "west")
+
+### combine all together
+
+catch_all_1 <- left_join(catch_north, catch_east, by= "fish")
+catch_location_data <- left_join(catch_all_1, catch_west, by= "fish")
+
+
+### Price Data
+
+price_data <- c("4000","15000", "20000", "25000", "20000") %>%
+  as_tibble()
+
+colnames(price_data) <- c("price") 
+rownames(price_data) <- c("parrot", "unicorn", "bonito", "yellowfin","swordfish")
+
+
+# because possible.fish was a factor catch1 will be a factor
+
+summary(catch_location_data)
+# if we want summary to be more useful - make this a factor
+catch_north = as.factor(catch_location_data)
+
+# to quickly get frequencies of different fish and to plot 
+summary(catch_location_data)
+plot(catch_location_data$north, col="blue")
+
+```
+
+
+
+
+
