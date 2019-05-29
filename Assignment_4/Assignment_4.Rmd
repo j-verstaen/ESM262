@@ -30,11 +30,13 @@ Generate some example data for your function; and show how this is created and u
 ```{r}
 library(tidyverse)
 library(dplyr)
+library(magrittr)
 ```
 
 ### Create test data
-```{r}
 
+Fish Caught 
+```{r}
 ### create vector of possible fish 
 possible.fish = c("parrotfish","unicornfish","bonito","yellowfin","swordfish")
 
@@ -43,54 +45,59 @@ possible.fish = c("parrotfish","unicornfish","bonito","yellowfin","swordfish")
 catch_north <- sample(possible.fish, size=20, replace=T) %>%
   as_tibble %>%
   group_by(value) %>%
-  count()
-
-colnames(catch_north) <- c("fish", "north")
-
+  count() %>%
+  magrittr::set_colnames(value = c("fish", "north"))
+  
 ### number of fish caught on eastside
 catch_east <- sample(possible.fish, size=20, replace=T) %>%
   as_tibble %>%
   group_by(value) %>%
-  count()
-
-colnames(catch_east) <- c("fish", "east")
+  count() %>%
+  magrittr::set_colnames(value = c("fish", "east"))
 
 ### number of fish caught on westside
 catch_west <- sample(possible.fish, size=20, replace=T) %>%
   as_tibble %>%
   group_by(value) %>%
-  count()
-
-colnames(catch_west) <- c("fish", "west")
-
+  count() %>%
+  magrittr::set_colnames(value = c("fish", "west"))
+                       
 ### combine all together
 
 catch_all_1 <- left_join(catch_north, catch_east, by= "fish")
-catch_location_data <- left_join(catch_all_1, catch_west, by= "fish")
+catch_location_data <- left_join(catch_all_1, catch_west, by= "fish") %>%
+  as.tibble() %>%
+  as.numeric(catch_location_data$north)
 
-
-### Price Data
-
-price_data <- c("4000","15000", "20000", "25000", "20000") %>%
-  as_tibble()
-
-colnames(price_data) <- c("price") 
-rownames(price_data) <- c("parrot", "unicorn", "bonito", "yellowfin","swordfish")
-
-
-# because possible.fish was a factor catch1 will be a factor
-
-summary(catch_location_data)
-# if we want summary to be more useful - make this a factor
-catch_north = as.factor(catch_location_data)
-
-# to quickly get frequencies of different fish and to plot 
-summary(catch_location_data)
-plot(catch_location_data$north, col="blue")
+### Orignially I had the fish be the row names but then I took that out to do what I wanted and this way more fish could be easily added to whatever future data
+#rownames(catch_location_data) = catch_location_data[ ,1] # the first row will be the header
+#catch_location_data = catch_location_data[,-1 ] 
 
 ```
 
+Price Data
+```{r}
 
+### In Polyneisan Francs
+price_data <- c("4000","15000", "20000", "25000", "20000") %>%
+  as.tibble %>%
+  mutate(fish = c("parrotfish", "unicornfish", "bonito", "yellowfin","swordfish")) %>%
+  magrittr::set_colnames(value = c("price", "fish")) %>%
+  mutate(price = parse_double(price, na = "0"))
+
+```
+
+Run Function
+```{r}
+
+source("R/fish.R")
+
+summary <- fish_summary(catch_location_data = catch_location_data, price_data = price_data, graph = TRUE, total_revenue = TRUE)
+summary
+
+##total revenue ie island revenue is showing up but being weird
+
+```
 
 
 
