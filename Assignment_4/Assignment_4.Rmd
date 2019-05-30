@@ -1,31 +1,13 @@
 ---
-title: "Assignment_4"
+title: "Assignment 4"
 author: "Juliette Verstaen"
 date: "5/28/2019"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-Write a function that takes as input
-
-a table that has prices for different fish a table that has the number caught for each fish species for each location * each location is in a different column * each fish is in a different row
-
-Function output will be
-
-    most frequently caught fish in each location
-    total revenue for each location
-
-    total fisheries revenue sum
-
-    if user requests it graph of revenue by location and total revenue (as text)
-
-Place your function in an *.R file Make a package that contains this function
-
-Generate some example data for your function; and show how this is created and used in an R markdown document Submit package and Rmarkdown as usual as a git link on gauchospace
-
 
 ```{r}
 library(tidyverse)
@@ -33,14 +15,16 @@ library(dplyr)
 library(magrittr)
 ```
 
-### Create test data
+#### Create Test Data
 
-Fish Caught 
+###Fish Caught 
 ```{r}
+
 ### create vector of possible fish 
 possible.fish = c("parrotfish","unicornfish","bonito","yellowfin","swordfish")
 
-###Fish Catch Data
+###Fish Catch Data (I used long format data frame)###
+
 ### number of fish caught on northside
 catch_north <- sample(possible.fish, size=20, replace=T) %>%
   as_tibble %>%
@@ -66,16 +50,16 @@ catch_west <- sample(possible.fish, size=20, replace=T) %>%
 
 catch_all_1 <- left_join(catch_north, catch_east, by= "fish")
 catch_location_data <- left_join(catch_all_1, catch_west, by= "fish") %>%
-  as.tibble() %>%
-  as.numeric(catch_location_data$north)
+  as.tibble() 
 
-### Orignially I had the fish be the row names but then I took that out to do what I wanted and this way more fish could be easily added to whatever future data
-#rownames(catch_location_data) = catch_location_data[ ,1] # the first row will be the header
-#catch_location_data = catch_location_data[,-1 ] 
+as.numeric(catch_location_data$north)
+
+#some runs have NAs instead of zeros from the sample of possible fish. This is in case that happens
+catch_location_data[is.na(catch_location_data)] <- 0
 
 ```
 
-Price Data
+###Price Data
 ```{r}
 
 ### In Polyneisan Francs
@@ -87,15 +71,13 @@ price_data <- c("4000","15000", "20000", "25000", "20000") %>%
 
 ```
 
-Run Function
+####Run Function
 ```{r}
 
-source("R/fish.R")
+source("R/calc_fisheries_data.R")
 
-summary <- fish_summary(catch_location_data = catch_location_data, price_data = price_data, graph = TRUE, total_revenue = TRUE)
+summary <- fish_summary(catch_location_data = catch_location_data, price_data = price_data, graph = TRUE)
 summary
-
-##total revenue ie island revenue is showing up but being weird
 
 ```
 
