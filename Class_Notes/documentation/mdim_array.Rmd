@@ -1,0 +1,153 @@
+---
+title: "Multidimensional_arrays"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Multidimensional Arrays
+
+
+A vector is a 1 dimensional array
+  * c(1,2,3,9,10)
+A matrix is a 2 dimensional array
+
+But what if we want  many arrays?
+
+lets say an array is uses rows for locations, columns for animals, and each cell records the number of each
+animal at each location
+What if we want to look at sample from different years - we need another "dimension"
+
+location * animal * time 
+(3 dimensions)
+
+what if samples were done by different researchers (4 dimensions)
+
+location * animal * time * research
+
+One way to represent data that is organized by different categories (animal, time, location etc) is to use
+multi-dimensional arrays
+
+Alternatively you can use a single data frame, but there are advantages to arrays - so worth learning...
+* the single data frame will need a column for each dimension
+
+#Creating the arary
+
+Lets imagine we are sampling soil moisture on differrnt plots types (avocado, apple, orange) on different farms
+and soil moisture is sampled at two different depths (25cm and 0.5 m)
+
+Thats 3 dimension
+*plot type (4) 
+*farm (5)
+*depth (2)
+
+
+
+
+```{r creating}
+# soil moisture at points for 5 different farms
+# and 4 different plots within each farm, 
+# one from avocado, one from apple, one from orange
+# one from almond - so 4 fruits
+# store soil moisture at 2 depths 
+# ( 25cm, 0.5m)
+
+# create array
+soilm = array(dim=c(5,4,2))
+dim(soilm)
+soilm
+
+
+# populate with values (we are just guessing, ideally this is where measuring would occur)
+for (i in 1:5) {
+  for (j in 1:4) {
+    value = runif(min=0.2,max=0.5,n=2)
+    soilm[i,j,]=value
+  }
+}
+soilm
+
+# add useful names
+dimnames(soilm) = list(c("Farm1","Farm2","Farm3","Farm4","Farm5"), 
+                      c("apple","avocado","orange","almond"),
+                      c("shallow","deep"))
+
+
+
+```
+
+## Using multi-dimensional arrays
+
+Ok so now lets look at the data stored in the arrays in different ways
+
+Use *apply* - and think about which dimensions to **keep** in the apply
+
+```{r using, echo=TRUE}
+
+# overall whole area and all depths
+# easiest!
+averagesoilm = mean(soilm)
+averagesoilm
+
+#lets say we want to keep the locations (farms and plots) but average 
+# over the two depths - average over the 3rd dimension
+averagegrid = apply(soilm, c(1,2),mean)
+averagegrid
+
+# now lets say we want to also find the average for each farm
+# keep the first dimension (5-farms) but average over plots and depths
+averagefarm = apply(soilm, c(1), mean)
+averagefarm
+
+# average by fruit
+averagefruit = apply(soilm, c(2), mean)
+averagefruit
+
+# average by  soil moisture depth
+averagedepth = apply(soilm, c(3), mean)
+averagedepth
+
+# you can use other functions as well
+sumfruit = apply(soilm, c(2), sum)
+sumfruit
+
+#  use your own function to summarize data 
+isdrought = function(sm, thresh) {
+  n = length(sm)
+  drought=TRUE
+  for (i in 1:n) {
+    if (sm[i] > thresh) drought=FALSE
+  }
+  return(drought)
+}
+soilm
+#local drought
+apply(soilm, c(1,2), isdrought, thresh=0.4)
+
+#farm drought
+apply(soilm, c(1), isdrought, thresh=0.5)
+
+#total area  is there drought anywhere
+isdrought(soilm, thresh=0.3)
+isdrought(soilm, thresh=0.7)
+```
+
+
+Finally we may find it easier to work with a simple data frame
+We can always convert to that
+
+```{r convert}
+
+library(reshape2)
+soilm_asdf = melt(soilm)
+soilm_asdf
+colnames(soilm_asdf)=c("Farm","Fruit","Depth","sm")
+ggplot(soilm_asdf, aes(Farm, sm, fill=Fruit))+geom_col(position="dodge")+facet_wrap(~Depth)
+
+
+
+```
+

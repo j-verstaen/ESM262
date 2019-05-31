@@ -1,0 +1,13 @@
+Package: esm237examplesS18
+Type: Package
+Title: Provides Examples for ESM 237
+Version: 0.1.0
+Author: Naomi
+Maintainer: Naomi <ctague@bren.ucsb.edu>
+Description: Contains arbitrary functions for illustration of package creation, function testing
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr

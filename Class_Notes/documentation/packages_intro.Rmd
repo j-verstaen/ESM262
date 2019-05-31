@@ -1,0 +1,417 @@
+---
+title: "Packages_intro"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(devtools)
+library(roxygen2)
+
+### loaded the package from the tgz drop down for install pacakges and then loaded from library
+library(esm237examplesS18)
+
+```
+
+- [code (zip)](documentation_code.zip)
+- [esm237examplesS18 as package](esm237examplesS18_0.1.0.tgz)
+
+# <span style="color:orange">PACKAGES</span>
+
+# <span style="color:orange">Definitions</span>
+
+* **Package**: An extension of the R base system with code, data and documentation in standardized
+format.
+* **Library**: A directory containing installed packages.
+* **Repository**: A website providing packages for installation.
+* **Source**: The original version of a package with human-readable text and code.
+* **Binary**: A compiled version of a package with computer-readable text and code, may work only
+on a specic platform.
+* **Base packages**: Part of the R source tree, maintained by R Core.
+* **Recommended packages**: Part of every R installation, but not necessarily maintained by R
+Core.
+* **Contributed packages**: All the rest. This does not mean that these packages are necessarily of
+lesser quality than the above, e.g., many contributed packages on CRAN are written and
+maintained by R Core members. They simply try to keep the base distribution as lean as
+possible.
+* **User packages**: Packages that you write, share with a smaller community - not downloadable
+from CRAN, but can be downloaded (or sent as a zip file) and loaded into R
+
+# <span style="color:orange">Why make packages</span>
+
+* to easily share functions and data with others with R-specific documentation
+
+* have a set of tools (functions) that you often use, that can be easily loaded
+
+* be part of the R community
+
+
+#  <span style="color:orange">Installing User Packages</span>
+* looks similar to CRAN packages
+
+* uncompiled (they can be compiled but not always) so  you can **see** the code
+
+You can load my package *esm237examplesS18* by 
+
+  * downloading *esm237examplesS18.tar.gz *
+    * DON'T UNZIP
+  
+  * install from a *package archive*
+  
+  
+  
+  * *library(esm237examples)*
+  
+  * to make sure it works,try the following
+  
+    *  *help(compute_NPV)*
+  
+    *  *spring_summary* 
+      * note that this shows you the code used to implement spring.summary
+
+
+
+# <span style="color:orange">Making your own packages</span>
+
+First lets review the format for writing functions
+
+* documentation (we will say more on this later)
+
+* function definition
+
+* named **something.R**
+
+* dont' have ANYTHING else in your **something.R** file
+
+* to see an example look at spring.summary.R on github`
+
+
+
+* Make sure you have version controll set up to work with R  
+[help on setting git with R](https://support.rstudio.com/hc/en-us/articles/200532077?version=1.1.463&mode=desktop)
+
+## Steps for starting a package
+
+
+* Think of a name for your package, it should be descriptive of the many related functions that you will store there
+      * mine will be **esm237examplesS18**
+
+* Create repository for this package on **git""
+
+* Back in Rstudio, start a new project, using the same name for the project as your package name
+    * choose the option in package creation to ** create a package **
+    * make sure that the **path** to this directory is not in the course directory, or other directory that is already under version control (git)
+    * link to existingyour Github repository
+    
+* If you already have an R function you can add it here
+  * make sure your function is named **something.R** and follows the format for functions that we have been using 
+  * try adding one of the functions that you created to compute diversity
+  
+* Install libraries **devtools** and **roxygen2** from CRAN
+
+* Link with a git repository post creation: see project set up on R **Tools** menu
+
+
+You will notice that this creates a directory structure that looks something like this
+
+R Package Directory ![](Rdirstruct.jpeg)
+
+You R function will be stored in the **R** subdirectory
+IF **man** and **data**, **tests** subdirectories are not created - created them
+
+This package (e.g **esm237examplesS18**)  directory structures  store your code and documentation; that is easy for R to read. It include
+
+* A file DESCRIPTION with descriptions of the package, author, and license conditions
+* A man/ subdirectory of documentation files.
+* An R/ subdirectory of R code.
+* A data/ subdirectory of datasets.
+
+# How to work on your package
+
+Inclass Exercise: Make a change to your R function, save it, then re-install  using either:
+  * *Build* - *Build and Reload* from menu
+  * *load_all()* command from command line
+
+This will Load your functions in your package that is under-development
+
+You can edit DESCRIPTION to add useful information particularly if you are going to share this package
+
+It is useful to keep an Rmarkdown file or R script that lets you run your function - while you are working this should be stored *outside* of the package directory
+
+Here's an example
+
+
+
+```{r code for spring_summary.R, eval=FALSE, echo=FALSE}
+spring_summary
+
+```
+
+Use of spring.summary
+```{r packageapp, eval=FALSE}
+
+
+# load "stuff" in your package including R
+load_all()
+#read in data
+clim=read.table("../clim.txt", header=T)
+
+# run a function in the package
+result = spring_summary(clim)
+result
+
+# notice
+help(spring_summary)
+
+```
+
+Try this:
+   * create a Rmarkdown file that you will use for using functions in your package
+   * save it in a directory above where you are creating your package
+   * in the Rmarkdown, provide code to generate some sample data, save it and read it in and apply your function to this data
+   
+   
+# Link back to Github
+
+* On *Github* create a new repository if you didn't create one above
+
+* Back in Rstudio, in your project, in a *shell* window in your R studio, do the following
+
+* make sure you are in the project directory (*pwd*)
+* execute the following command
+
+ *git remote add origin 'http link from git' * 
+ 
+ then
+ 
+ * *git pull origin master*
+ 
+ * *git push -u origin master*
+ 
+ Now your Project is linked with github and you can push/pull changes to github repo (when you are ready)
+ Keep in mind that you can work locally to *play*
+ 
+ Two setps to send stuff to github repo
+ 
+ * commit locally
+ 
+ * push to git hub
+ 
+ * if you are collaborating or working on different machines its also good to pull regularly
+ 
+ 
+ 
+
+
+  
+
+  
+# <span style="color:orange">Documentation</span>
+
+ 
+* There is a standard format for documentation that can be read by automatic programs (roxygen2) - an R package that generate “standard” R documentation - manual or help pages
+
+* These automated approaches for building documentation (like roxygen2) and meta data (descriptions of data sets) are increasingly common - so you should get into the practice of being structured in your approach to documentation
+
+* We will use the conventions that work with roxygen2 - and then use this program to generate formal R documentation. Roxygen is similar to Doxygen which is used for C code…so its a widely used format
+
+Documentation is placed at the top of the *something.R* file
+all lines start with *\#\'*
+
+Here's an example
+
+Documentation example ![](doc.exam.jpeg)
+
+##Three Parts to R documentation
+* **Description** - summary of what your model/function does
+* **Tagged (using special “key” words)**
+
+Here are some examples there are many others
+
+* *\@param*  inputs/parameter description
+* *\@return* what your function returns (outputs)
+* *\@example*  how to use it
+* *\@references*  citations or urls
+* *\@author* YOU
+
+(you don’t need all of these and there are more tags, but start with at least param and return, example is a good idea
+
+* **Within function** Any use of # within the body of the function (this does not get used in the Help)
+
+## Creating Help pages
+
+If you use this approach then *roxygen* can generate help pages  - here are the steps
+
+* Add the documentation information as described above to your function
+
+* Save your function, make sure that it is in the  *R\/* subdirectory your project directory
+eg *esm237examples\/R\/test.R*
+
+* Set your working directory to your project directory
+
+* Make sure you've run *library(roxygen2)*
+
+* Run *document* from Rstudio drop down menu or *document()* from command line  - this will create documentation for ANY of the *.R files you have in the R directory (you can have many of them)
+
+* try  *help(test.R)* to see the results
+
+* you don't have to re-run document the next time your run R,  to load (used when you have project and are developing your new package), if it is another package this will be part of the install
+
+* if you change one of your R functons or the documentation, you need to build and re-load
+
+* try adding another small function - something simple with documentation
+
+# <span style="color:orange">Adding Data to your package</span>
+
+## Accessing existing data stored with packages
+
+To access a dataset that has been stored with a package
+
+**data(name)**
+
+There are numerous data sets stored with the base R package
+try 
+`data(CO2)'
+`help(CO2)'
+
+This is a data set on carbon dioxide uptake in plants - note that it always has help documentation that is similar to functions
+
+
+You can then refer to that dataset as an object in your workspace
+
+## Storing your own data
+
+*have the dataset (e.g clim) in your workspace
+
+* set working directory to one level above your package directory
+
+* save the data to the data subdirectory of your package using:
+  * use_data(name, pkg="packagename")
+  * eg. *use_data(clim, pkg=esm237examplesS18)*
+
+* dataset will be stored as data/name.rda in your package
+
+```{r storing data, echo=FALSE, eval=FALSE}
+
+clim=read.table("clim.txt", header=T)
+use_data(clim, pkg="../esm237examplesS18", overwrite=TRUE)
+data(clim)
+```
+
+## Documenting Data Sets for Packages
+
+Here's an example 
+
+Data Documentation example ![](datadoc.jpeg)
+
+### Steps for documenting data sets
+
+* store documentation as a file (dataname.R) 
+ (e.g **R/clim.R**)
+save that file in the R subdirectory of your package
+
+* this file will contain ONLY the documentation for the data set
+
+* when you rebuild or run document - documentation will be created with roxygen2
+
+* format is similar to documentation for function but you will use some different identifiers for documentation including:
+    * title
+    * descripition
+    * \@format
+    * \@source
+    * \\itemize - itemize allows you to describe the data (see example above)
+
+  * end the file with the name of your dataset (in data directory) in quotes
+  
+  * set your working directory to your project directory 
+  
+  * once you've generated the documentation - run *document(dataname)* and try *help(dataname)* to test
+  
+
+
+
+Generate some data and store it with your package
+
+
+```{r usingdata, echo=FALSE, eval=FALSE}
+
+data(clim)
+help(clim)
+spring_summary(clim)
+
+```
+
+# <span style="color:orange">Vignettes</span>
+
+Vignettes are additional documentation on how to use your packages (and/or functions
+within the package) that provide example uses
+* usually written in *Rmarkdown*
+
+You can see available vignettes for all currently loaded packages with
+
+**vignette()**
+
+or for a particular package
+
+**vignette(package="dplyr")**
+
+To actually see the vignette (comes up in help window)
+**vignette("two-table")**
+
+Basic outline for making a vignette for your package
+
+* write with *R markdown*
+* store in a **vignettes** subdirectory of the package structure
+* run **build_vignettes()**
+
+Running **build_vignettes()** will create some additional subdirectories **doc** and **Meta**
+after build you need to reinstall with build vignette flag on
+
+**install(buld_vignettes=TRUE)**
+**library(package_name)**
+
+and re load your library!
+
+A few technical details first
+
+* add the following to the top of the my-vignette.Rmd (and edit **my_vignette** with your names)
+
+```{black, type='a'}
+---
+title: "my-vignette"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{my-vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+```
+
+* note that you can have more than one vignette in a package
+
+* you may need to add the following lines to **DESCRIPTION**
+
+```{black, type='a'}
+
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr
+
+```
+
+See **esm237examplesS18/vignettes/using_climate_summaries.Rmd**
+
+
+Try to make a vignette for your function
+
+# <span style="color:orange">Giving the package to others</span>
+
+When you work on the defining the package you use the project of the same name
+To give the package to others - (who will simply be using it)
+
+* build a source package (see build directory)
+
+* this will create an *.gz file that you can distribute
+
+* the user will then **install** this package in order to have access to functions and data in your package
+

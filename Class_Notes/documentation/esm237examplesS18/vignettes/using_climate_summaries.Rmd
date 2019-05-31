@@ -1,0 +1,45 @@
+---
+title: "using_climate_summaries"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{using_climate_summaries}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(tidyverse)
+library(esm237examplesS18)
+
+```
+
+Lets read in data and then calculate some summary statistics
+
+```{r example}
+
+#get data (you could load your own here)
+data(clim)
+
+# standard applicatio
+res = spring_summary(clim )
+res
+
+# output spring summary for all years
+res = spring_summary(clim, springout=TRUE)
+ggplot(res$all.springT, aes(year, tavg))+geom_col()+labs(y="mean T (C)", x="year")
+
+# change spring months to just may 
+res2 = spring_summary(clim, spring_months=c(5), springout=TRUE)
+
+# set up for graphing differences
+res2$all.springT$Mayonly=TRUE
+res$all.springT$Mayonly=FALSE
+both = rbind.data.frame(res2$all.springT, res$all.springT)
+ggplot(both, aes(year,tavg, col=Mayonly))+geom_line()+labs(y="mean T (C)", x="year")
+
+```
+
