@@ -11,7 +11,7 @@ fish_summary = function(catch_location_data, price_data, graph=FALSE) {
   
   ### 1. most frequently caught fish at each location (ie: side of the island)  
 
-    north_catch <- rep(catch_location_data$fish, catch_location_data$north)
+  north_catch <- rep(catch_location_data$fish, catch_location_data$north)
   west_catch <- rep(catch_location_data$fish, catch_location_data$west)
   east_catch <- rep(catch_location_data$fish, catch_location_data$east)
   
