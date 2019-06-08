@@ -31,8 +31,21 @@ functions:
 6. a vignette that shows how to use several of the functions with the sample data
 7. 3 separate tests - (next weeks lecture)
 
+
+Notes:
+- functions need to be robust enought to take additional data from other places
 ```{r}
 library(tidyverse)
+
+library(tidyverse)
+library(gapminder)
+library(lmtest)
+library(sandwich)
+library(broom)
+library(stargazer)
+library(knitr)
+library(car)
+
 ```
 
 
@@ -67,10 +80,10 @@ clim <- clim %>%
 #a few years have no data so omit them cause 0s would skew data
 clim <- na.omit(clim)
 
-#write.csv(clim, "clim.csv")
+write.csv(clim, "clim.csv")
 
-names(grapes) <- c("date", "red_weight", "white_weight", "red_price", "white_price")
-#write.csv(grapes, "grapes.csv")
+names(grapes) <- c("year", "red_weight", "white_weight", "red_price", "white_price")
+write.csv(grapes, "grapes.csv")
 
 
 ```
@@ -102,14 +115,14 @@ temp_array
 ```{r}
 
 #data = clim when actually using it
-graph_precip = function(data = clim) {
+graph_precip = function(clim) {
   
   func2 <- clim %>%
     group_by(year) %>%
     summarize(annual_precip = sum(precip))%>%
     ungroup()
   
-  graph <- ggplot(func2) +
+  graph_precip() <- ggplot(func2) +
   geom_line(aes(x=year, y= annual_precip, group = 1), color= "navy") +
     ggtitle("Annual Total Precipitation") +
     xlab("Year") +
@@ -122,6 +135,7 @@ graph_precip = function(data = clim) {
 }
 ```
 
+
 3. Calculate index scores: if temperature reaches below X then returns a "temp too low for growing"; if temp reaerches above X then return "temp high, water more")
 Pretend: 
 - both = 4
@@ -130,35 +144,162 @@ Pretend:
 - anything else = 1
 
 Here assuming that colder is worse, grapes can withstand hotter temps better as long as watered, but harder to protect agaisnt cold
+
+option to choose precipitation and do the same thing with precip levels
 ```{r}
 
-temp_threshold = function(clim) {
- 
-test <-  mutate(clim, 
-    index = case_when(
-    tmin < "38" ~ "3",
-    tmax > "82" ~ "2", 
-    tmin < "38"  & tmax > "82" ~ "4"))
- #   tmin >= "38"  & tmax <= "82" ~ "1")
-  test  
+temp_threshold = function(clim, type) {
+  
+  if( type = "temp") {
+
+  clim$index = ifelse(clim$tmin < 38  & clim$tmax > 82, 4,
+                       ifelse(clim$tmin <= 38, 3, 
+                          ifelse( clim$tmax >= 82, 2, 
+                                  1)))
+  #summarize months out of each year where the temperature was outside of the thresholds
+  
+  out_thresh <- clim %>%
+    group_by(year) %>%
+    count(index = index)
+  
+   out_thresh$index <- as.factor(out_thresh$index) 
+  
+  graph_threshold <- ggplot(out_thresh) +
+    geom_histogram(aes(x= year, y= n, fill=index), stat = "identity") +
+    theme_classic() +
+    labs(title = "Number of months at each index per year ", caption = "*Years with missing data do not have 12 months") +
+    xlab("Year") +
+    ylab("Number Months *") +
+    scale_fill_brewer(palette="Spectral") }
+  
+  if(type = "precipitation") {
+    clim$index = ifelse(clim$precip <= 1, 3, 
+                          ifelse( clim$precip >= 10, 2, 
+                                  1))
+  #summarize months out of each year where the temperature was outside of the thresholds
+  
+  out_thresh <- clim %>%
+    group_by(year) %>%
+    count(index = index)
+  
+   out_thresh$index <- as.factor(out_thresh$index) 
+  
+  graph_threshold <- ggplot(out_thresh) +
+    geom_histogram(aes(x= year, y= n, fill=index), stat = "identity") +
+    theme_classic() +
+    labs(title = "Number of months at each index per year ", caption = "*Years with missing data do not have 12 months") +
+    xlab("Year") +
+    ylab("Number Months *") +
+    scale_fill_brewer(palette="PuBu") }
     
-    
-    
-    
-  ))
+  
+  return(graph_threshold)
   
 }
 
+```
+
+3.5. Regression that temp and precp has on grapes harvest (total, red, white)
+
+```{r}
+
+effect_clim_harvest = function(clim, grapes) {
+  
+  library(stargazer)
+  
+  clim_grape <- left_join(clim, grapes, by = "year")
+  
+  clim_grape <- clim_grape %>%
+    mutate(total_weight=red_weight+white_weight) %>%
+    mutate(average_weight = (red_price+white_price)/2) 
+  
+  ##regressions for climate effects on price
+  lm_redharv <- lm(red_weight ~ precip + tavg, data = clim_grape)
+  lm_whiteharv <- lm(white_weight ~ precip + tavg, data = clim_grape)
+  lm_totalharv <- lm(average_weight ~ precip + tavg, data = clim_grape)
+
+stargazer(lm_redharv, lm_whiteharv, lm_totalharv, type="text", title="Regression Results: Effects of Climate on Grape Harvest", dep.var.labels=c("Red", "White", "Avg Both" ), align=TRUE)
+  
+}
 
   
+```
+
+
+4. Regression graphs predicting price from harvest
+### figure out how to choose the color and change the legend titlt
+```{r}
+ 
+effect_harv_price = function(clim, grapes) {
   
-
-
+  ##regressions for amount harvested on price
+  lm_redharv <- lm(red_price ~ red_weight, data = clim_grape)
+  summary(lm_redharv)
+  
+  lm_whiteharv <- lm(average_price ~ white_weight, data = clim_grape)
+  summary(lm_whiteharv)
+    
+  lm_totalharv <- lm(average_price ~ total_weight, data = clim_grape)
+  summary(lm_totalharv)
+  
+  test <- ggplot(clim_grape) +
+    geom_point(aes(x= red_weight, y= red_price), color = "red4")+
+    stat_smooth(aes(x= red_weight, y= red_price, color= "Red Grapes"),method = "lm", fill = "red4")+
+    geom_point(aes(x= white_weight, y= white_price), color= "yellow4")+
+    stat_smooth(aes(x= white_weight, y= white_price, color = "White Grapes"),method = "lm", fill= "yellow4")+
+     geom_point(aes(x= total_weight, y= average_price))+
+    stat_smooth(aes(x= total_weight, y= average_price, color = "Both Grapes"),method = "lm", fill = "gray4")+
+    xlab("Weight (thousand tons)")+
+    ylab("Price ($/ton)") +
+    theme_classic() +
+    ggtitle("Effects of Harvest on Price")
+  test
+  
+}
+  
 ```
 
 
 
+5. Regression that temp and precp has on grapes price (total, red, white)
+- estimating the costs of impacts
 
+```{r}
+
+effect_index_price = function(clim, grapes) {
+  
+  library(stargazer)
+  
+  clim$index_temp = ifelse(clim$tmin < 38  & clim$tmax > 82, 4,
+                       ifelse(clim$tmin <= 38, 3, 
+                          ifelse( clim$tmax >= 82, 2, 
+                                  1)))
+  
+   clim$index_precip = ifelse(clim$precip <= 1, 3, 
+                          ifelse( clim$precip >= 10, 2, 
+                                  1))
+
+  
+   clim$index_precip <- as.factor(clim$index_precip) 
+      clim$index_temp <- as.factor(clim$index_temp) 
+  
+  clim_grape <- left_join(clim, grapes, by = "year")
+  
+  clim_grape <- clim_grape %>%
+    mutate(total_weight=red_weight+white_weight) %>%
+    mutate(average_price = (red_price+white_price)/2) 
+  
+  ##regressions for climate effects on price
+  lm_redprice <- lm(red_price ~ index_precip + index_temp, data = clim_grape)
+  lm_whiteprice <- lm(white_price ~ index_precip + index_temp, data = clim_grape)
+  lm_totalprice <- lm(average_price ~ index_precip + index_temp, data = clim_grape)
+
+stargazer(lm_redprice, lm_whiteprice, lm_totalprice, type="text", title="Regression Results: Effects of Climate Indices on Grape Price", dep.var.labels=c("Red", "White", "Avg Both" ), align=TRUE)
+  
+}
+
+  
+```
 
 
 
