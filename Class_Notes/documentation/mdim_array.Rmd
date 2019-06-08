@@ -64,8 +64,10 @@ soilm
 # populate with values (we are just guessing, ideally this is where measuring would occur)
 for (i in 1:5) {
   for (j in 1:4) {
+    for(k in 1:2) {
     value = runif(min=0.2,max=0.5,n=2)
-    soilm[i,j,]=value
+    soilm[i,j,k]=value
+  }
   }
 }
 soilm
@@ -94,6 +96,7 @@ averagesoilm
 
 #lets say we want to keep the locations (farms and plots) but average 
 # over the two depths - average over the 3rd dimension
+##keep the rows and keep the columns ,c(1,2) but average over the dim, here its soild mositure (shallew and deep) so it;ll average that
 averagegrid = apply(soilm, c(1,2),mean)
 averagegrid
 

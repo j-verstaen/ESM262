@@ -1,0 +1,274 @@
+---
+title: "Testing"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(testthat)
+library(roxygen2)
+library(devtools)
+
+library(esm237examplesS18)
+```
+
+- [code (zip)](../testing.zip)
+
+# WHY Test
+
+Wikipedia reports that in 2002, NIST study found that software budge cost the US economy 59.5 billion annually
+
+# Top 12 Reasons to Write Unit Tests 
+
+Burke and Coyner (Java programmers)
+
+[details](http://www.onjava.com/pub/a/onjava/2003/04/02/javaxpckbk.html)
+
+* Tests reduce bugs in new features
+* Tests reduce bugs in existing features
+* Tests defend agains other programmers
+* Testing forces you to slow down and think
+* Testing makes development faster
+* Tests reduce fear
+
+# Types of Testing
+
+Testing levels
+
+* Unit testing (your individual subroutine)
+* Integration testing (testing the situations where one submodule call another)
+* Component interface or data passing testing (test format of outputs)
+* System testing (testing the whole model )
+
+# Unit Testing
+
+Does the code do what you think it does?  
+How?
+
+* Give functions/code inputs where you know what the answer should be 
+* Run your data on “fake code” where you know what to expect
+* Make sure that outputs conform to known expectations
+  * conservation of mass, money, energy
+  * positive/negative values (e.g. total cost can't be negative)
+  * relative values (e.g. streamflow can't be greater than precipitation)
+
+# Error Checking
+
+Error checking are built-in features in functions/code that return a message to the user if something goes ‘bad’ - 
+often used to make sure the input data is in the format that the function requires
+also used to return a message if something about the data gives an NA (e.g from a divide by zero)
+
+# Efficient (automatic) testing
+
+Developers now often use software to help them automate the testing process
+
+Re-uses tests - software that makes it efficient to repeat many tests as you develop and modify the code
+
+Automatic testing software is available for R, Python, C etc.
+
+Automated testing workflow
+
+* Design your tests
+* Code them
+* Save in a format that makes them easy to repeat
+* Run the test EVERYTIME you make a change to your code
+  * In R, “testthat” library help you do this
+
+# Using **testthat** in R
+
+Require *devtools* and *testhtat* libraries
+
+Work in your project directory
+
+* **load_all()** sources everyting in R subdirectory
+* **document** creates documentation
+* **test_dir("name")** runs all test in directory "name"
+* **test_file(""name")** run all tests in file called "name"
+
+Put all tests in the **tests** subdirectory of your package
+(see esm237examplesS18)
+
+Testing with **testthat** works with *expectation* - what you expect the results of your function to be
+
+*expect_that*s are organized in *test_that* 
+
+*test_that* are organized in *test_name.R* files in the *tests* director
+
+# Expectation (built in functions in R)
+
+* *expect_that(function, equals(value))*
+* *expect_that(function, is_identical_to(value))*
+    difference between equals and is_identical_to is that equals included a tolerance (really really small difference OK)
+* *expect_that(function, matches(value))*
+
+OR
+
+* *expect_true(condition)*
+
+You can also write your own expectation
+
+Lets see how this works
+
+```{r examples, error=TRUE}
+
+#need the error=TRUE in line above so the code will die if what you're doing isn't true (ie: giv you the error message and thenstop computing)
+library(testthat)
+library(devtools)
+
+# simple illustrations
+
+a = 1
+b = 3
+
+expect_that(a + b, equals(4))
+expect_that(a + b, equals(0))
+
+expect_true(a > b)
+```
+
+```{r error=TRUE}
+# help debug a function
+# that computes leaf growth as a function of temperature
+
+# should be stored as leafgrowth.R in your package
+# but for illustration just show here
+
+leafgrowth = function(t) {
+  lf = (t)**2 + 20
+
+  if (t > 30) {
+    lf = lf / 10
+  }
+
+  if (t < 0) {
+    lf = 0
+  }
+
+  return(lf)
+}
+
+expect_that(leafgrowth(0), equals(0))
+```
+
+```{r error=TRUE}
+# fix my bug in leaf growth function
+
+leafgrowth = function(t) {
+  lf = (t)**2 + 20
+
+  if (t > 30) {
+    lf = lf / 10
+  }
+  
+  if (t <= 0) {  # change "<" to "<="
+    lf = 0
+  }
+  
+  return(lf)
+}
+
+expect_that(leafgrowth(0), equals(0))
+```
+
+```{r error=TRUE}
+# what if I edited this function -
+# I want to a base level of growth from fertilizer
+# but still want growth to be zero if temperatures are < zero;
+# but I put in the wrong place; I might miss this -
+# but I have my expect test to catch it
+
+leafgrowth = function(t, fert = 0.2) {
+  lf = (t)**2 + 20
+  
+  if (t > 30) {
+    lf = lf / 10
+  }
+  
+  if (t <= 0) {
+    lf = 0
+  }
+  
+  lf = lf + fert
+  
+  return(lf)
+}
+
+expect_that(leafgrowth(0), equals(0))
+```
+
+```{r error=TRUE}
+# fix this issue
+
+leafgrowth = function(t, fert = 0.2) {
+  lf = (t)**2 + 20
+  
+  if (t > 30) {
+    lf = lf / 10
+  }
+  
+  lf = lf + fert
+  
+  if (t <= 0) {
+    lf = 0
+  }
+  
+  return(lf)
+}
+
+expect_that(leafgrowth(0), equals(0))
+```
+
+you can also generate fake data to help test the functionality of your function
+
+```{r error=TRUE}
+# test our spring summary function to make sure that
+# if input rainfall is 0, output of spring rainfall is zero
+
+spring_summary
+```
+
+```{r error=TRUE}
+# generate some fake data for testing
+
+clim_test_data =
+  as.data.frame(
+    cbind(
+      month = c(1:4),
+      day   = rep(1, times = 4),
+      year  = rep(1, times = 4),
+      rain  = rep(0, times = 4),
+      tmax  = c(2, 2, 1, 1),
+      tmin  = rep(0, times = 4)
+    )
+  )
+
+expect_that(spring_summary(clim_test_data)$mean_springP, equals(0))
+expect_true(spring_summary(clim_test_data)$coldest_spring_yr > 0)
+
+
+```
+
+# Tests are multiple expectations linked together 
+
+add all your expectations to *test_that*
+
+format
+
+**test_that**("name_of_test", { data generation, expect_thats})
+
+you can run these "automatically" to check many things each time you change the code
+* using **test_dir** or **test_file**
+
+Example
+
+```{r asfiles, error=TRUE}
+# creat a test that fails as an example
+# open test_spring_summary.R
+
+# test on my spring summary code that is working correctly
+# RStudio: Build -> Test Package
+```
+
+This will set up a testing framework for you: just simple multiplication it seems like
+usethis::use_test()

@@ -1,0 +1,176 @@
+---
+title: "Assignment 5"
+author: "Juliette Verstaen"
+date: "6/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Here’s what the package should contain
+
+1. at least two different functions that summarize climate data in some way (your choice - it could be finding a trend, or finding extremes; or even simply mean winter precipitation)
+
+Grapes take three years to grow 
+- cant get too cold 
+- needs lots 
+
+functions:
+1. maximum (and minimum) temperature for each year -> gives you table (use an array here maybe one array is temp min and one array is max ; month and year will be the row and column labels)
+2. graph precipitation 
+3. calculate index scores: if temperature reaches below X then returns a "temp too low for growing"; if temp reaerches above X then return "temp high, water more") -> different for red vs white grapes
+4.  Do a regression that temp and precp has on grapes harvested?
+5. Regression for rain and temeprature on price (one function that estimates the costs of impacts)
+(this could be the array: one array with the climate data, year seperated out, and another array matching the years with the total harvested and price this could be a third array for price each year)
+
+4. some sample data
+5. documentation for ALL functions
+6. a vignette that shows how to use several of the functions with the sample data
+7. 3 separate tests - (next weeks lecture)
+
+```{r}
+library(tidyverse)
+```
+
+
+Units:
+weight of grapes = thousand tons
+price = $/ton
+Temp = F
+Precipitation = cm
+
+Read in Data
+```{r}
+
+#need to figure out how to source this data witho
+napaclimraw <- read_csv("data/napaclim_raw.csv")
+
+clim <- napaclimraw %>%
+  select(DATE, TMIN, TMAX, TAVG, PRCP)
+
+grapes <- read_csv("data/grape_crushed.csv")%>%
+  select(Year, napa_red_ttons, napa_white_ttons, red_price, white_price)
+
+```
+
+
+Data Tidying
+```{r}
+
+#climate data
+names(clim) <- c("year", "tmin", "tmax", "tavg", "precip")
+clim <- clim %>%
+  separate(year, c("year", "month"), by = "-") 
+#a few years have no data so omit them cause 0s would skew data
+clim <- na.omit(clim)
+
+#write.csv(clim, "clim.csv")
+
+names(grapes) <- c("date", "red_weight", "white_weight", "red_price", "white_price")
+#write.csv(grapes, "grapes.csv")
+
+
+```
+
+Clear everything and load in the new data frames so everything is nice and clean from now on
+
+```{r}
+
+clim <- read_csv("data/clim.csv")
+grapes <- read_csv("data/grapes.csv")
+
+```
+
+
+Functions:
+
+1. Maximum (and minimum) temperature for each year -> gives you table (use an array here maybe one array is temp min and one array is max ; month and year will be the row and column labels)
+```{r}
+
+temp_array <- array(dim= c(23,12,2))
+dim(temp_array)
+temp_array
+
+```
+
+
+
+2. Graph total yearly precipitation 
+```{r}
+
+#data = clim when actually using it
+graph_precip = function(data = clim) {
+  
+  func2 <- clim %>%
+    group_by(year) %>%
+    summarize(annual_precip = sum(precip))%>%
+    ungroup()
+  
+  graph <- ggplot(func2) +
+  geom_line(aes(x=year, y= annual_precip, group = 1), color= "navy") +
+    ggtitle("Annual Total Precipitation") +
+    xlab("Year") +
+    ylab("Precipitation (cm)")+
+    theme_classic()+
+    theme(axis.text.x=element_text(angle=90, hjust=1))
+  
+  return(graph)
+  
+}
+```
+
+3. Calculate index scores: if temperature reaches below X then returns a "temp too low for growing"; if temp reaerches above X then return "temp high, water more")
+Pretend: 
+- both = 4
+- below 38F = 3
+- above 82 = 2
+- anything else = 1
+
+Here assuming that colder is worse, grapes can withstand hotter temps better as long as watered, but harder to protect agaisnt cold
+```{r}
+
+temp_threshold = function(clim) {
+ 
+test <-  mutate(clim, 
+    index = case_when(
+    tmin < "38" ~ "3",
+    tmax > "82" ~ "2", 
+    tmin < "38"  & tmax > "82" ~ "4"))
+ #   tmin >= "38"  & tmax <= "82" ~ "1")
+  test  
+    
+    
+    
+    
+  ))
+  
+}
+
+
+  
+  
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
