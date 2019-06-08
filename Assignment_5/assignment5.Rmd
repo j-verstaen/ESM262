@@ -9,14 +9,14 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Questions for Casey:
+- estimation of costs of impacts: do you have to run the impact function first and use those outputs as an input for the cost function or should it be integrated into the fucntion?
+- regression in 3.5 is giving me a table but also a weird error "length of NULL cannot be changedlength of NULL cannot be changedlength of NULL cannot be changedlength of NULL cannot be changedlength of NULL cannot be changed"
+- should we source the function in the tests?
+
+
 
 Here’s what the package should contain
-
-1. at least two different functions that summarize climate data in some way (your choice - it could be finding a trend, or finding extremes; or even simply mean winter precipitation)
-
-Grapes take three years to grow 
-- cant get too cold 
-- needs lots 
 
 functions:
 1. maximum (and minimum) temperature for each year -> gives you table (use an array here maybe one array is temp min and one array is max ; month and year will be the row and column labels)
@@ -122,7 +122,11 @@ graph_precip = function(clim) {
     summarize(annual_precip = sum(precip))%>%
     ungroup()
   
-  graph_precip() <- ggplot(func2) +
+  min_precip <- min(func2$annual_precip)
+  
+  max_precip <- max(func2$annual_precip)
+  
+  graph_precip<- ggplot(func2) +
   geom_line(aes(x=year, y= annual_precip, group = 1), color= "navy") +
     ggtitle("Annual Total Precipitation") +
     xlab("Year") +
@@ -130,9 +134,12 @@ graph_precip = function(clim) {
     theme_classic()+
     theme(axis.text.x=element_text(angle=90, hjust=1))
   
-  return(graph)
+  return(list(graph_precip, min_precip=min_precip, max_precip=max_precip))
   
 }
+
+graph_precip(clim)
+
 ```
 
 
@@ -148,9 +155,9 @@ Here assuming that colder is worse, grapes can withstand hotter temps better as 
 option to choose precipitation and do the same thing with precip levels
 ```{r}
 
-temp_threshold = function(clim, type) {
+temp_threshold = function(clim, weather ) {
   
-  if( type = "temp") {
+  if( weather == "temperature") {
 
   clim$index = ifelse(clim$tmin < 38  & clim$tmax > 82, 4,
                        ifelse(clim$tmin <= 38, 3, 
@@ -172,7 +179,7 @@ temp_threshold = function(clim, type) {
     ylab("Number Months *") +
     scale_fill_brewer(palette="Spectral") }
   
-  if(type = "precipitation") {
+  if(weather == "precipitation") {
     clim$index = ifelse(clim$precip <= 1, 3, 
                           ifelse( clim$precip >= 10, 2, 
                                   1))
@@ -199,7 +206,7 @@ temp_threshold = function(clim, type) {
 
 ```
 
-3.5. Regression that temp and precp has on grapes harvest (total, red, white)
+3.5. Regression: effcts temp and precip has on grapes harvest (total, red, white)
 
 ```{r}
 
@@ -210,7 +217,6 @@ effect_clim_harvest = function(clim, grapes) {
   clim_grape <- left_join(clim, grapes, by = "year")
   
   clim_grape <- clim_grape %>%
-    mutate(total_weight=red_weight+white_weight) %>%
     mutate(average_weight = (red_price+white_price)/2) 
   
   ##regressions for climate effects on price
@@ -232,6 +238,12 @@ stargazer(lm_redharv, lm_whiteharv, lm_totalharv, type="text", title="Regression
  
 effect_harv_price = function(clim, grapes) {
   
+  clim_grape <- left_join(clim, grapes, by = "year")
+  
+  clim_grape <- clim_grape %>%
+    mutate(total_weight=red_weight+white_weight) %>%
+    mutate(average_price = (red_price+white_price)/2) 
+  
   ##regressions for amount harvested on price
   lm_redharv <- lm(red_price ~ red_weight, data = clim_grape)
   summary(lm_redharv)
@@ -242,18 +254,23 @@ effect_harv_price = function(clim, grapes) {
   lm_totalharv <- lm(average_price ~ total_weight, data = clim_grape)
   summary(lm_totalharv)
   
-  test <- ggplot(clim_grape) +
+  graph_harv_price <- ggplot(clim_grape) +
     geom_point(aes(x= red_weight, y= red_price), color = "red4")+
     stat_smooth(aes(x= red_weight, y= red_price, color= "Red Grapes"),method = "lm", fill = "red4")+
+
     geom_point(aes(x= white_weight, y= white_price), color= "yellow4")+
     stat_smooth(aes(x= white_weight, y= white_price, color = "White Grapes"),method = "lm", fill= "yellow4")+
-     geom_point(aes(x= total_weight, y= average_price))+
+    geom_point(aes(x= total_weight, y= average_price))+
     stat_smooth(aes(x= total_weight, y= average_price, color = "Both Grapes"),method = "lm", fill = "gray4")+
+    scale_colour_manual(values = c("Both Grapes" = "gray4", "Red Grapes" = "red4", "White Grapes" = "yellow4"))+
     xlab("Weight (thousand tons)")+
     ylab("Price ($/ton)") +
     theme_classic() +
     ggtitle("Effects of Harvest on Price")
-  test
+  
+    graph_harv_price
+  
+  return(graph_harv_price)
   
 }
   
@@ -297,14 +314,52 @@ effect_index_price = function(clim, grapes) {
 stargazer(lm_redprice, lm_whiteprice, lm_totalprice, type="text", title="Regression Results: Effects of Climate Indices on Grape Price", dep.var.labels=c("Red", "White", "Avg Both" ), align=TRUE)
   
 }
-
   
 ```
 
+###Testing
+```{r error = TRUE}
+
+library(devtools)
+library(testthat)
+
+#source function to test?
+
+##Test 1
+test_that("graph_precip", { 
+  clim_test_data =
+  as.data.frame(
+    cbind(
+      year  = c(1995:2018),
+      precip  = runif(min=0, max=50, n=24),
+      tavg = runif(min=30, max= 95, n=24)
+    )
+  )
+  expect_true(graph_precip(clim_test_data)$min_precip>=0)
+  expect_true(graph_precip(clim_test_data)$max_precip>=0)})
+
+##Test 2
+test_that()
+grape_test_data =
+  as.data.fram(
+    cbind(
+      year  = c(1995:2018),
+      red_weight = runif(min= 40, max= 100, n=24),
+      red_weight = runif(min= 400, max= 730, n=24),
+      red_price = runif(min= 100, max= 1000, n=24),
+      white_price = runif(min= 350, max= 650, n=24)
+    )
+  )
 
 
+expect_true()
 
 
+##Test 3
+## expect that for function temp_threshold() there wont be any indexes in a year that equals more than 12
+
+
+```
 
 
 
